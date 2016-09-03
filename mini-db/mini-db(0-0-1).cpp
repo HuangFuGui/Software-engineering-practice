@@ -14,12 +14,80 @@ char field_info[1024] = "\0";
 
 typedef struct node{
 	char content[300];
-	struct node *son[8];
+	struct node *son[10];
 	int son_num = 0;
 	int interface_sign = 0;
 }node,*command_tree;
 command_tree q,node_array[1000];
 
+/*Interfaces*/
+void tips();
+void build_command_tree();
+command_tree traverse_command_tree(command_tree father,char *cur_command_word);
+void separate_command_by_space();
+int max_width(char *one_line);
+void create_database();//I:1
+void create_table();//I:2
+void desc_table(char *tb_name);//I:3
+void use_database();//I:4
+void analyze_command_line(char *command_line,command_tree root);
+
+int main(){
+	
+	printf("\n\t\t\tWelcome to mini-db!\n\n");
+	printf("You can manage your database easily,remember following tips at first:\n\n");
+	tips();//show tips when clients launch this application 
+	printf("You can input 'SHOW TIPS;' to show these tips again,hope to have a good experience!\n\n");
+	
+	build_command_tree();
+	
+	int input_i=0;//input module
+	while(1){  
+		scanf("%c",&command_char);
+		if(command_char!=';'){
+			command_line[input_i++] = command_char;
+		}else{ //';'will not be in the command_line
+			getchar(); //for Enter key
+			command_line[input_i] = '\0';
+			input_i=0;
+			analyze_command_line(command_line,node_array[0]);
+			
+			memset(command_line,'\0',sizeof(command_line));
+			memset(command_word,'\0',sizeof(command_word));
+			memset(command_parameter,'\0',sizeof(command_parameter));
+			command_word_num = 0,command_parameter_num = 0;
+		}
+	}
+}
+
+/*Implements*/
+void tips(){//tips 
+	printf("Create database:\n");
+	printf("\tCREATE DATABASE db_name;\n\n");
+	printf("Choose database:\n");
+	printf("\tUSE db_name;\n\n");
+	printf("Show tables of the database:\n");
+	printf("\tSHOW TABLES;\n\n");
+	printf("Create and define table:\n");
+	printf("\tCREATE TABLE tb_name(\n");
+	printf("\t\tcol_name1 DATATYPE[(LENGTH)],\n");
+	printf("\t\tcol_name2 DATATYPE[(LENGTH)],\n");
+	printf("\t\t...\n");
+	printf("\t\tcol_nameN DATATYPE[(LENGTH)]\n");
+	printf("\t\t);\n\n");
+	printf("Select data from table:\n");
+	printf("\tSELECT * FROM tb_name [WHERE col_name1 = ... AND col_name2 = ...] [GROUP BY col_name] [ORDER BY col_name [DESC]] [LIMIT...];\n");
+	printf("\tSELECT col_name1 [,col_name2] [,col_name3] FROM tb_name [WHERE col_name1 = ... AND col_name2 = ...] [GROUP BY col_name] [ORDER BY col_name [DESC]] [LIMIT...];\n\n");
+	printf("Insert data into table:\n");
+	printf("\tINSERT [INTO] tb_name VALUES(value1,value2,...,valueN);\n");
+	printf("\tINSERT [INTO] tb_name(col_name1,col_name2,[col_name...]) VALUES(value1,value2,[value...]);\n\n");
+	printf("Update data:\n");
+	printf("\tUPDATE tb_name SET col_name1 = value1 [,col_name2 = value2] [,col_name3 = value3] [WHERE] [col_name = value];\n\n");	
+	printf("Delete data:\n");
+	printf("\tDELETE FROM tb_name [WHERE col_name = value];\n\n");
+	printf("Create index for column:\n");
+	printf("\tCREATE INDEX idx_name ON tb_name (col_name);\n\n");
+}
 
 void build_command_tree(){
 	
@@ -93,6 +161,36 @@ void build_command_tree(){
 	node_array[9]->son[0] = q;
 	node_array[9]->son_num++;
 	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"INSERT");
+	node_array[i++] = q;//11
+	node_array[0]->son[3] = q;
+	node_array[0]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"INTO");
+	node_array[i++] = q;//12
+	node_array[11]->son[0] = q;
+	node_array[11]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"{tb_name}");
+	node_array[i++] = q;//13
+	node_array[12]->son[0] = q;
+	node_array[12]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"VALUES");
+	node_array[i++] = q;//14
+	node_array[13]->son[0] = q;
+	node_array[13]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"{insert_values}");
+	q->interface_sign = 5;
+	node_array[i++] = q;//15
+	node_array[14]->son[0] = q;
+	node_array[14]->son_num++;
 }
 
 command_tree traverse_command_tree(command_tree father,char *cur_command_word){
@@ -115,24 +213,41 @@ command_tree traverse_command_tree(command_tree father,char *cur_command_word){
 
 void separate_command_by_space(){//command_word[0,i]
 	int k=0,i=0,j=0;
+	int comma_flag = 0,space_flag=0; 
+	int first_quote_flag = 0; 
 	for(k=0;command_line[k]!='\0';k++){
+		if(command_line[k]=='\''&&comma_flag==0){//for comma and space in '...'
+			comma_flag = 1;
+			space_flag = 1;
+			continue;
+		}
+		if(comma_flag==1&&(command_line[k]==','||command_line[k]==' ')){
+			command_word[i][j++] = command_line[k];
+			continue;
+		}
+		if(comma_flag==1&&command_line[k]=='\''){
+			comma_flag = 0;
+			space_flag = 0;
+			continue;
+		}
+		
 		if(command_line[k]=='('||command_line[k]==')'||command_line[k]=='\n'){
 			continue;
 		}
 		if(command_line[k]!=' '&&command_line[k]!=','){
 			command_word[i][j++] = command_line[k];
 		}
-		else if(command_line[k]==' '||command_line[k]==','){
+		if(command_line[k]==' '||command_line[k]==','){
 			command_word[i][j] = '\0';
 			i++;
 			j=0;
-		}	
+		}
 	}
 	command_word_num = i+1;
 	
-	/*for(i=0;i<command_word_num;i++){
+	for(i=0;i<command_word_num;i++){
 		printf("command_word: %s\n",command_word[i]);
-	}*/
+	}
 }
 
 int max_width(char *one_line){
@@ -157,34 +272,6 @@ int max_width(char *one_line){
 	}
 	return max;
 }
-void tips(){//tips 
-	printf("Create database:\n");
-	printf("\tCREATE DATABASE db_name;\n\n");
-	printf("Choose database:\n");
-	printf("\tUSE db_name;\n\n");
-	printf("Show tables of the database:\n");
-	printf("\tSHOW TABLES;\n\n");
-	printf("Create and define table:\n");
-	printf("\tCREATE TABLE tb_name(\n");
-	printf("\t\tcol_name1 DATATYPE[(LENGTH)],\n");
-	printf("\t\tcol_name2 DATATYPE[(LENGTH)],\n");
-	printf("\t\t...\n");
-	printf("\t\tcol_nameN DATATYPE[(LENGTH)]\n");
-	printf("\t\t);\n\n");
-	printf("Select data from table:\n");
-	printf("\tSELECT * FROM tb_name [WHERE col_name1 = ... AND col_name2 = ...] [GROUP BY col_name] [ORDER BY col_name [DESC]] [LIMIT...];\n");
-	printf("\tSELECT col_name1 [,col_name2] [,col_name3] FROM tb_name [WHERE col_name1 = ... AND col_name2 = ...] [GROUP BY col_name] [ORDER BY col_name [DESC]] [LIMIT...];\n\n");
-	printf("Insert data into table:\n");
-	printf("\tINSERT [INTO] tb_name VALUES(value1,value2,...,valueN);\n");
-	printf("\tINSERT [INTO] tb_name(col_name1,col_name2,[col_name...]) VALUES(value1,value2,[value...]);\n\n");
-	printf("Update data:\n");
-	printf("\tUPDATE tb_name SET col_name1 = value1 [,col_name2 = value2] [,col_name3 = value3] [WHERE] [col_name = value];\n\n");	
-	printf("Delete data:\n");
-	printf("\tDELETE FROM tb_name [WHERE col_name = value];\n\n");
-	printf("Create index for column:\n");
-	printf("\tCREATE INDEX idx_name ON tb_name (col_name);\n\n");
-}
-
 
 void create_database(){//interface_sign:1
 
@@ -200,56 +287,6 @@ void create_database(){//interface_sign:1
 	strcpy(database,fade_database);
 	
 	printf("<INFO>:Create database successfully!\n\n");
-}
-
-void desc_table(char *tb_name){//interface_sign:3
-	int i = 0;
-	char table_road[1024] = "\0";
-	
-	for(i=0;database[i]!='\0';i++){
-		table_road[i] = database[i];
-	}
-	table_road[i] = '/';
-	
-	int j = i + 1;
-	for(i=0;tb_name[i]!='\0';i++){
-		table_road[j++] = tb_name[i];
-	}
-	table_road[j] = '.';
-	table_road[j+1] = 't';
-	table_road[j+2] = 'x';
-	table_road[j+3] = 't';
-	table_road[j+4] = '\0';
-	
-	FILE *file = fopen(table_road,"a+");
-	char buffer[1024] = "\0";
-	if(file!=NULL){
-		
-		fgets(buffer,1024,file);
-		
-		int cur_max_width = max_width(buffer);
-		int cur_printf_length = 0;
-		for(i=0;buffer[i]!='\0';i++){
-			if(buffer[i]==' '){
-				if(cur_printf_length<cur_max_width){
-					for(j = 1;j<=cur_max_width-cur_printf_length;j++){
-						printf(" ");
-					}
-				}
-				printf("  |  ");
-				cur_printf_length = 0;
-				continue;
-			}
-			if(buffer[i]=='\t'){
-				printf("\n");
-				cur_printf_length = 0;
-				continue;
-			}
-			printf("%c",buffer[i]);
-			cur_printf_length++;
-		}
-	}
-	printf("\n\n");
 }
 
 void create_table(){//interface_sign:2
@@ -308,6 +345,56 @@ void create_table(){//interface_sign:2
 	}
 }
 
+void desc_table(char *tb_name){//interface_sign:3
+	int i = 0;
+	char table_road[1024] = "\0";
+	
+	for(i=0;database[i]!='\0';i++){
+		table_road[i] = database[i];
+	}
+	table_road[i] = '/';
+	
+	int j = i + 1;
+	for(i=0;tb_name[i]!='\0';i++){
+		table_road[j++] = tb_name[i];
+	}
+	table_road[j] = '.';
+	table_road[j+1] = 't';
+	table_road[j+2] = 'x';
+	table_road[j+3] = 't';
+	table_road[j+4] = '\0';
+	
+	FILE *file = fopen(table_road,"a+");
+	char buffer[1024] = "\0";
+	if(file!=NULL){
+		
+		fgets(buffer,1024,file);
+		
+		int cur_max_width = max_width(buffer);
+		int cur_printf_length = 0;
+		for(i=0;buffer[i]!='\0';i++){
+			if(buffer[i]==' '){
+				if(cur_printf_length<cur_max_width){
+					for(j = 1;j<=cur_max_width-cur_printf_length;j++){
+						printf(" ");
+					}
+				}
+				printf("  |  ");
+				cur_printf_length = 0;
+				continue;
+			}
+			if(buffer[i]=='\t'){
+				printf("\n");
+				cur_printf_length = 0;
+				continue;
+			}
+			printf("%c",buffer[i]);
+			cur_printf_length++;
+		}
+	}
+	printf("\n\n");
+}
+
 void use_database(){//interface_sign:4
 	int i=0;
 	char fade_database[100] = "\0";
@@ -318,7 +405,11 @@ void use_database(){//interface_sign:4
 	
 	database = new char[i];
 	strcpy(database,fade_database);
-	printf("\n");
+	printf("<INFO>:Database %s selected!\n\n",database);
+}
+
+void insert_values(){
+	printf("将要插入磁盘表中\n\n");
 }
 
 void analyze_command_line(char *command_line,command_tree root){//command line analyze module
@@ -355,35 +446,10 @@ void analyze_command_line(char *command_line,command_tree root){//command line a
 			if(analyze_q->interface_sign==4){
 				use_database();
 			}
+			if(analyze_q->interface_sign==5){
+				insert_values();
+			}
 			break;
-		}
-	}
-}
-
-
-int main(){
-	printf("\n\t\t\tWelcome to mini-db!\n\n");
-	printf("You can manage your database easily,remember following tips at first:\n\n");
-	tips();//show tips when clients launch this application 
-	printf("You can input 'SHOW TIPS;' to show these tips again,hope to have a good experience!\n\n");
-	
-	build_command_tree();
-	
-	int input_i=0;//input module
-	while(1){  
-		scanf("%c",&command_char);
-		if(command_char!=';'){
-			command_line[input_i++] = command_char;
-		}else{ //';'will not be in the command_line
-			getchar(); //for Enter key
-			command_line[input_i] = '\0';
-			input_i=0;
-			analyze_command_line(command_line,node_array[0]);
-			
-			memset(command_line,'\0',sizeof(command_line));
-			memset(command_word,'\0',sizeof(command_word));
-			memset(command_parameter,'\0',sizeof(command_parameter));
-			command_word_num = 0,command_parameter_num = 0;
 		}
 	}
 }
