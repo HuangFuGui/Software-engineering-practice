@@ -30,6 +30,8 @@ void create_table();//I:2
 void desc_table(char *src);//I:3
 void use_database();//I:4
 void insert_values();//I:5
+void delete_all();//I:6
+void delete_by_col();//I:7
 void analyze_command_line(char *command_line,command_tree root);
 
 int main(){
@@ -190,6 +192,50 @@ void build_command_tree(){
 	node_array[i++] = q;//15
 	node_array[14]->son[0] = q;
 	node_array[14]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"DELETE");
+	node_array[i++] = q;//16
+	node_array[0]->son[4] = q;
+	node_array[0]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"FROM");
+	node_array[i++] = q;//17
+	node_array[16]->son[0] = q;
+	node_array[16]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"{tb_name}");
+	q->interface_sign = 6;
+	node_array[i++] = q;//18
+	node_array[17]->son[0] = q;
+	node_array[17]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"WHERE");
+	node_array[i++]  =q;//19
+	node_array[18]->son[0] = q;
+	node_array[18]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"{col_name}");
+	node_array[i++] = q;//20
+	node_array[19]->son[0] = q;
+	node_array[19]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"=");
+	node_array[i++] = q;//21
+	node_array[20]->son[0] = q;
+	node_array[20]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"{value}");
+	q->interface_sign = 7;
+	node_array[i++] = q;//22
+	node_array[21]->son[0] = q;
+	node_array[21]->son_num++;
 }
 
 command_tree traverse_command_tree(command_tree father,char *cur_command_word){
@@ -266,7 +312,7 @@ int max_width(char *one_line){
 	return max;
 }
 
-void now_database(char *src){//for USE and change database
+void now_database(char *src){//for CREATE and USE database
 	int i=0;
 	char fade_database[100] = "\0";
 	for(i=0;src[i]!='\0';i++){
@@ -337,6 +383,7 @@ void create_table(){//interface_sign:2
 		field_info[k] = '\n';
 		fputs(field_info,file);
 		fflush(file);//synchronizes an output stream with the actual file    or fclose(file);
+		fclose(file);
 		
 		desc_table(command_word[2]);
 	}
@@ -372,6 +419,7 @@ void desc_table(char *src){//interface_sign:3
 			printf("%c",buffer[i]);
 			cur_printf_length++;
 		}
+		fclose(file);
 	}
 	printf("\n\n");
 }
@@ -405,7 +453,123 @@ void insert_values(){//interface_sign:5
 	else{
 		fputs(value,file);
 		fflush(file);
+		fclose(file);
 		printf("<INFO>:Insert value successfully!\n\n");
+	}
+}
+
+void delete_all(){//interface_sign:6
+
+	now_table(command_word[2]);
+	char true_table_name[300] = "\0";
+	strcpy(true_table_name,table);
+	
+	file = fopen(table,"a+");
+	char buffer[1024] = "\0";
+	if(file==NULL){
+		printf("<ERROR>:Delete failed!\n\n");
+	}
+	else{
+		now_table("temp");
+		FILE *temp = fopen(table,"a+");
+		if(temp==NULL){
+			printf("<ERROR>:Delete failed!\n\n");
+		}
+		else{
+			fgets(buffer,1024,file);
+			fputs(buffer,temp);
+			fflush(temp);
+			
+			fclose(file);
+			fclose(temp);
+			
+			remove(true_table_name);
+			rename(table,true_table_name);
+			
+			printf("<INFO>:Delete all rows successfully!\n\n");
+		}
+	}
+}
+
+void delete_by_col(){//interface_sign:7
+
+	now_table(command_word[2]);
+	char true_table_name[300] = "\0";
+	strcpy(true_table_name,table);
+	file = fopen(table,"a+");
+	char buffer[1024] = "\0";
+	
+	char field_word[12][50];
+	int k = 0,i = 0,j = 0,field_separate_flag = 0;
+	char delete_col_value[100] = "\0";
+	int delete_num = 0;
+	
+	now_table("temp");
+	FILE *temp = fopen(table,"a+");
+	if(file==NULL||temp==NULL){
+		printf("<ERROR>:Delete failed!\n\n");
+	}
+	else{
+		fgets(buffer,1024,file);
+		fputs(buffer,temp);
+
+		for(k = 0;buffer[k]!='\n';k++){//get columns from database  -->  field_word[0,i]
+			if(buffer[k]==' '){
+				field_word[i][j++] = '\0';
+				field_separate_flag++;
+				continue;
+			}
+			if(buffer[k]=='\t'){
+				field_separate_flag++;
+				i++;
+				j = 0;
+				continue;
+			}
+			if(field_separate_flag%2==0){
+				field_word[i][j++] = buffer[k];
+			}
+		}
+		
+		for(k = 0;k<=i;k++){
+			if(strcmp(field_word[k],command_word[4])==0){
+				break;
+			}
+		}
+		
+		while(fgets(buffer,1024,file)!=NULL){//start from the second row
+			field_separate_flag = 0;
+			j = 0;
+			memset(delete_col_value,'\0',sizeof(delete_col_value));
+			for(i = 0;buffer[i]!='\n';i++){
+				if(buffer[i]=='\t'){
+					field_separate_flag++;
+					continue;
+				}
+				if(field_separate_flag == k){
+					delete_col_value[j++] = buffer[i];
+				}
+			}
+			delete_col_value[j++] = '\0';
+			
+			if(strcmp(delete_col_value,command_word[6])==0){
+				delete_num++;
+			}
+			else{
+				fputs(buffer,temp);
+			}
+		}
+		fclose(file);
+		fclose(temp);
+		
+		remove(true_table_name);
+		rename(table,true_table_name);	
+		
+		if(delete_num>1){
+			printf("<INFO>:Delete successfully!%d rows deleted!\n\n",delete_num);	
+		}
+		else{
+			printf("<INFO>:Delete successfully!%d row deleted!\n\n",delete_num);	
+		}
 	}
 }
 
@@ -445,6 +609,15 @@ void analyze_command_line(char *command_line,command_tree root){//command line a
 			}
 			if(analyze_q->interface_sign==5){
 				insert_values();
+			}
+			if(analyze_q->interface_sign==6&&i==command_word_num-1){
+				delete_all();
+			}
+			if(analyze_q->interface_sign==6&&i!=command_word_num-1){
+				continue;
+			}
+			if(analyze_q->interface_sign==7){
+				delete_by_col();
 			}
 			break;
 		}
