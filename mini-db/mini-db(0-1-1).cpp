@@ -3,14 +3,11 @@
 #include<string.h>
 #include<dir.h>
 
-void tips();
-char command_char,command_line[300],command_word[100][100],command_parameter[20][50];
-int command_word_num = 0,command_parameter_num = 0;
-void analyze_command_line(char *command_line); 
+char command_char,command_line[300],command_word[100][100];
+int command_word_num = 0;
 char *database;
-char table[100];
+char table[300] = "\0";
 FILE *file;
-char field_info[1024] = "\0";
 
 typedef struct node{
 	char content[300];
@@ -26,10 +23,13 @@ void build_command_tree();
 command_tree traverse_command_tree(command_tree father,char *cur_command_word);
 void separate_command_by_space();
 int max_width(char *one_line);
+void now_database(char *src);
+void now_table(char *src);
 void create_database();//I:1
 void create_table();//I:2
-void desc_table(char *tb_name);//I:3
+void desc_table(char *src);//I:3
 void use_database();//I:4
+void insert_values();//I:5
 void analyze_command_line(char *command_line,command_tree root);
 
 int main(){
@@ -54,8 +54,7 @@ int main(){
 			
 			memset(command_line,'\0',sizeof(command_line));
 			memset(command_word,'\0',sizeof(command_word));
-			memset(command_parameter,'\0',sizeof(command_parameter));
-			command_word_num = 0,command_parameter_num = 0;
+			command_word_num = 0;
 		}
 	}
 }
@@ -198,13 +197,7 @@ command_tree traverse_command_tree(command_tree father,char *cur_command_word){
 	int i=0;
 	for(i=0;i<father->son_num;i++){
 		q = father->son[i];
-		if(q->content[0]=='{'){
-			/*printf("%s\n",cur_command_word);*/
-			strcpy(command_parameter[command_parameter_num++],cur_command_word);
-			return q;
-		}
-		if(strcmp(q->content,cur_command_word)==0){
-			/*printf("%s\n",q->content);*/
+		if(q->content[0]=='{'||strcmp(q->content,cur_command_word)==0){
 			return q;
 		}
 	}
@@ -245,15 +238,15 @@ void separate_command_by_space(){//command_word[0,i]
 	}
 	command_word_num = i+1;
 	
-	for(i=0;i<command_word_num;i++){
+	/*for(i=0;i<command_word_num;i++){
 		printf("command_word: %s\n",command_word[i]);
-	}
+	}*/
 }
 
 int max_width(char *one_line){
 	int i = 0,max = -1,cur_max = 0;
 	while(1){
-		if(one_line[i]!='\t'&&one_line[i]!=' '&&one_line[i]!='\0'){
+		if(one_line[i]!='\t'&&one_line[i]!=' '&&one_line[i]!='\n'){
 			cur_max++;
 		}
 		if(one_line[i]=='\t'||one_line[i]==' '){
@@ -262,7 +255,7 @@ int max_width(char *one_line){
 			}
 			cur_max = 0;
 		}
-		if(one_line[i] =='\0'){
+		if(one_line[i] =='\n'){
 			if(cur_max>max){
 				max = cur_max;
 			}
@@ -273,50 +266,54 @@ int max_width(char *one_line){
 	return max;
 }
 
-void create_database(){//interface_sign:1
-
-	mkdir(command_parameter[0]);
-	
+void now_database(char *src){//for USE and change database
 	int i=0;
 	char fade_database[100] = "\0";
-	for(i=0;command_parameter[0][i]!='\0';i++){
-		fade_database[i] = command_parameter[0][i];
+	for(i=0;src[i]!='\0';i++){
+		fade_database[i] = src[i];
 	}
 	fade_database[i] = '\0';
 	database = new char[i];
 	strcpy(database,fade_database);
+}
+
+void now_table(char *src){//table to use now 
 	
-	printf("<INFO>:Create database successfully!\n\n");
+	memset(table,'\0',sizeof(table));
+	
+	int i = 0;
+	for(i=0;database[i]!='\0';i++){
+		table[i] = database[i];
+	}
+	table[i] = '/';
+	
+	int j = i + 1;
+	for(i=0;src[i]!='\0';i++){
+		table[j++] = src[i];
+	}
+	table[j] = '.';
+	table[j+1] = 't';
+	table[j+2] = 'x';
+	table[j+3] = 't';
+	table[j+4] = '\0';
+}
+
+void create_database(){//interface_sign:1
+	mkdir(command_word[2]);
+	now_database(command_word[2]);
+	printf("<INFO>:Create %s successfully!\n\n",database);
 }
 
 void create_table(){//interface_sign:2
-
-	strcpy(table,command_parameter[0]);
-	
-	int i = 0;
-	char table_road[1024] = "\0";
-	
-	for(i=0;database[i]!='\0';i++){
-		table_road[i] = database[i];
-	}
-	table_road[i] = '/';
-	
-	int j = i + 1;
-	for(i=0;table[i]!='\0';i++){
-		table_road[j++] = table[i];
-	}
-	table_road[j] = '.';
-	table_road[j+1] = 't';
-	table_road[j+2] = 'x';
-	table_road[j+3] = 't';
-	table_road[j+4] = '\0';
-	
-	FILE *file = fopen(table_road,"a+");
+	int i = 0,j = 0;
+	now_table(command_word[2]);
+	FILE *file = fopen(table,"a+");
+	char field_info[1024] = "\0";
 	if(file==NULL){
-		printf("<INFO>:Create table failed!\n\n");
+		printf("<INFO>:Create %s table failed!\n\n",command_word[2]);
 	}
 	else{
-		printf("<INFO>:Create table successfully!\n"); 
+		printf("<INFO>:Create %s table successfully!\n",command_word[2]); 
 		int k=0;
 		i=3;
 		j=0;
@@ -337,42 +334,26 @@ void create_table(){//interface_sign:2
 			}
 			field_info[k++] = command_word[i][j++];
 		}
-		field_info[k] = '\0';
+		field_info[k] = '\n';
 		fputs(field_info,file);
 		fflush(file);//synchronizes an output stream with the actual file    or fclose(file);
 		
-		desc_table(table);
+		desc_table(command_word[2]);
 	}
 }
 
-void desc_table(char *tb_name){//interface_sign:3
-	int i = 0;
-	char table_road[1024] = "\0";
-	
-	for(i=0;database[i]!='\0';i++){
-		table_road[i] = database[i];
-	}
-	table_road[i] = '/';
-	
-	int j = i + 1;
-	for(i=0;tb_name[i]!='\0';i++){
-		table_road[j++] = tb_name[i];
-	}
-	table_road[j] = '.';
-	table_road[j+1] = 't';
-	table_road[j+2] = 'x';
-	table_road[j+3] = 't';
-	table_road[j+4] = '\0';
-	
-	FILE *file = fopen(table_road,"a+");
+void desc_table(char *src){//interface_sign:3
+	int i = 0,j = 0;
+	now_table(src);
+	FILE *file = fopen(table,"a+");
 	char buffer[1024] = "\0";
+	
 	if(file!=NULL){
-		
 		fgets(buffer,1024,file);
 		
 		int cur_max_width = max_width(buffer);
 		int cur_printf_length = 0;
-		for(i=0;buffer[i]!='\0';i++){
+		for(i=0;buffer[i]!='\n';i++){
 			if(buffer[i]==' '){
 				if(cur_printf_length<cur_max_width){
 					for(j = 1;j<=cur_max_width-cur_printf_length;j++){
@@ -396,20 +377,36 @@ void desc_table(char *tb_name){//interface_sign:3
 }
 
 void use_database(){//interface_sign:4
-	int i=0;
-	char fade_database[100] = "\0";
-	for(i=0;command_parameter[0][i]!='\0';i++){
-		fade_database[i] = command_parameter[0][i];
-	}
-	fade_database[i] = '\0';
-	
-	database = new char[i];
-	strcpy(database,fade_database);
+	now_database(command_word[1]);
 	printf("<INFO>:Database %s selected!\n\n",database);
 }
 
-void insert_values(){
-	printf("将要插入磁盘表中\n\n");
+void insert_values(){//interface_sign:5
+	
+	now_table(command_word[2]);
+	
+	int i = 0,j = 0,k = 0;
+	char value[2048] = "\0";
+	for(i = 4;i<command_word_num;i++){
+		for(j = 0;command_word[i][j]!='\0';j++){
+			value[k++] = command_word[i][j];
+		}
+		if(i<command_word_num-1){
+			value[k++] = '\t';
+		}
+		else{
+			value[k++] = '\n';// ***
+		}
+	}
+	file = fopen(table,"a+");
+	if(file==NULL){
+		printf("<ERROR>:Insert value failed!\n\n");
+	}
+	else{
+		fputs(value,file);
+		fflush(file);
+		printf("<INFO>:Insert value successfully!\n\n");
+	}
 }
 
 void analyze_command_line(char *command_line,command_tree root){//command line analyze module
@@ -441,7 +438,7 @@ void analyze_command_line(char *command_line,command_tree root){//command line a
 				create_table();
 			}
 			if(analyze_q->interface_sign==3){
-				desc_table(command_parameter[0]);
+				desc_table(command_word[1]);
 			}
 			if(analyze_q->interface_sign==4){
 				use_database();

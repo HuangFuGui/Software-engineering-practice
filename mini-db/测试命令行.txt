@@ -1,3 +1,9 @@
+
+CREATE DATABASE 我的数据库;
+
+CREATE DATABASE 我的数据库2;
+
+
 CREATE TABLE user (
 id INT,
 username VARCHAR,
@@ -6,15 +12,23 @@ email VARCHAR,
 description VARCHAR
 );
 
-CREATE TABLE user (
+CREATE TABLE user2 (
 id INT,
 username VARCHAR,
 password VARCHAR,
 email VARCHAR
 );
 
+CREATE TABLE client2 (
+id INT,
+username VARCHAR,
+password VARCHAR,
+email VARCHAR,
+address VARCHAR
+);
 
-CREATE DATABASE 我的数据库;
+
+
 
 SELECT * FROM TABLE_NAME WHERE COL_NAME1 = ... AND COL_NAME2 = ... GROUP BY COL_NAME ORDER BY COL_NAME DESC LIMIT ...;
 
@@ -25,3 +39,5 @@ INSERT INTO user VALUES (1,'黄复贵','qwe123','1151650717@qq.com','一个很爱写代码
 INSERT INTO user VALUES (1,'黄复贵','qwe123','1151650717@qq.com','like eating,coding and writing blog.');
 
 INSERT INTO user VALUES (1,'黄复贵','qwe123','1151650717@qq.com','eating,coding.');
+
+INSERT INTO client2 VALUES (1,'黄复贵','qwe123','1151650717@qq.com','广东，深圳');
