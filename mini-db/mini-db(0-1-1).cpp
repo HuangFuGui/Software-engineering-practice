@@ -32,6 +32,9 @@ void use_database();//I:4
 void insert_values();//I:5
 void delete_all();//I:6
 void delete_by_col();//I:7
+void select_all_columns_all_rows();//I:8
+void select_all_columns_by_column();//I:9
+void select_several_columns_all_rows();//I:8_2
 void analyze_command_line(char *command_line,command_tree root);
 
 int main(){
@@ -236,6 +239,64 @@ void build_command_tree(){
 	node_array[i++] = q;//22
 	node_array[21]->son[0] = q;
 	node_array[21]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"SELECT");
+	node_array[i++] = q;//23
+	node_array[0]->son[5] = q;
+	node_array[0]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"*");
+	node_array[i++] = q;//24
+	node_array[23]->son[0] = q;
+	node_array[23]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"{several_col_name}");
+	node_array[i++] = q;//25
+	node_array[23]->son[1] = q;
+	node_array[23]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"FROM");
+	node_array[i++] = q;//26
+	node_array[24]->son[0] = q;
+	node_array[24]->son_num++;
+	node_array[25]->son[0] = q;
+	node_array[25]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"{tb_name}");
+	q->interface_sign = 8;
+	node_array[i++] = q;//27
+	node_array[26]->son[0] = q;
+	node_array[26]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"WHERE");
+	node_array[i++] = q;//28
+	node_array[27]->son[0] = q;
+	node_array[27]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"{col_name}");
+	node_array[i++] = q;//29
+	node_array[28]->son[0] = q;
+	node_array[28]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"=");
+	node_array[i++] = q;//30
+	node_array[29]->son[0] = q;
+	node_array[29]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"{value}");
+	q->interface_sign = 9;
+	node_array[i++] = q;//31;
+	node_array[30]->son[0] = q;
+	node_array[30]->son_num++;
 }
 
 command_tree traverse_command_tree(command_tree father,char *cur_command_word){
@@ -284,9 +345,30 @@ void separate_command_by_space(){//command_word[0,i]
 	}
 	command_word_num = i+1;
 	
-	/*for(i=0;i<command_word_num;i++){
+	if(strcmp(command_word[0],"SELECT")==0&&strcmp(command_word[1],"*")!=0){//Select several columns...
+		j=0;
+		int cut_command_word_num = 0;
+		for(j=0;command_word[1][j]!='\0';j++);
+		command_word[1][j++] = '\t';
+		for(i=2;strcmp(command_word[i],"FROM")!=0;i++){
+			for(k=0;command_word[i][k]!='\0';k++){
+				command_word[1][j++] = command_word[i][k];
+			}
+			command_word[1][j++] = '\t';
+			cut_command_word_num++;
+		}
+		command_word[1][j-1] = '\0';
+		
+		k = 2;
+		for(j=i;j<command_word_num;j++){
+			strcpy(command_word[k++],command_word[j]);
+		}
+		command_word_num = command_word_num - cut_command_word_num;
+	}
+	
+	for(i=0;i<command_word_num;i++){
 		printf("command_word: %s\n",command_word[i]);
-	}*/
+	}
 }
 
 int max_width(char *one_line){
@@ -573,6 +655,138 @@ void delete_by_col(){//interface_sign:7
 	}
 }
 
+void select_all_columns_all_rows(){//interface_sign:8
+	now_table(command_word[3]);
+	file = fopen(table,"a+");
+	char buffer[1024] = "\0";
+	
+	char field_word[12][50];
+	int k = 0,i = 0,j = 0,field_separate_flag = 0,select_num = 0;
+	if(file==NULL){
+		printf("<ERROR>:Query failed!\n\n");
+	}
+	else{
+		fgets(buffer,1024,file);
+		for(k = 0;buffer[k]!='\n';k++){//get columns from database  -->  field_word[0,i]
+			if(buffer[k]==' '){
+				field_word[i][j++] = '\0';
+				field_separate_flag++;
+				continue;
+			}
+			if(buffer[k]=='\t'){
+				field_separate_flag++;
+				i++;
+				j = 0;
+				continue;
+			}
+			if(field_separate_flag%2==0){
+				field_word[i][j++] = buffer[k];
+			}
+		}
+		for(k=0;k<=i;k++){
+			printf("%s",field_word[k]);
+			if(k<i){
+				printf("\t");
+			}
+			else{
+				printf("\n");
+			} 
+		}
+		while(fgets(buffer,1024,file)!=NULL){
+			select_num++;
+			printf("%s",buffer);
+		}
+	}
+	if(select_num>1){
+		printf("<INFO>:Query ok!%d rows return.\n\n",select_num);
+	}
+	else{
+		printf("<INFO>:Query ok!%d row return.\n\n",select_num);
+	}
+	fclose(file);
+}
+
+void select_all_columns_by_column(){//interface_sign:9
+	now_table(command_word[3]);
+	file = fopen(table,"a+");
+	
+	char buffer[1024] = "\0";
+	char field_word[12][50];
+	int k = 0,i = 0,j = 0,field_separate_flag = 0,select_num = 0;
+	char select_col_value[100] = "\0";
+	
+	if(file==NULL){
+		printf("<ERROR>:Query failed!\n\n");
+	}
+	else{
+		fgets(buffer,1024,file);
+		for(k = 0;buffer[k]!='\n';k++){//get columns from database  -->  field_word[0,i]
+			if(buffer[k]==' '){
+				field_word[i][j++] = '\0';
+				field_separate_flag++;
+				continue;
+			}
+			if(buffer[k]=='\t'){
+				field_separate_flag++;
+				i++;
+				j = 0;
+				continue;
+			}
+			if(field_separate_flag%2==0){
+				field_word[i][j++] = buffer[k];
+			}
+		}
+		
+		for(k=0;k<=i;k++){
+			printf("%s",field_word[k]);
+			if(k<i){
+				printf("\t");
+			}
+			else{
+				printf("\n");
+			} 
+		}
+		
+		for(k = 0;k<=i;k++){
+			if(strcmp(field_word[k],command_word[5])==0){
+				break;
+			}
+		}
+		
+		while(fgets(buffer,1024,file)!=NULL){//start from the second row
+			field_separate_flag = 0;
+			j = 0;
+			memset(select_col_value,'\0',sizeof(select_col_value));
+			for(i = 0;buffer[i]!='\n';i++){
+				if(buffer[i]=='\t'){
+					field_separate_flag++;
+					continue;
+				}
+				if(field_separate_flag == k){
+					select_col_value[j++] = buffer[i];
+				}
+			}
+			select_col_value[j++] = '\0';
+			
+			if(strcmp(select_col_value,command_word[7])==0){
+				select_num++;
+				printf("%s",buffer);
+			}
+		}
+		if(select_num>1){
+			printf("<INFO>:Query ok!%d rows return.\n\n",select_num);
+		}
+		else{
+			printf("<INFO>:Query ok!%d row return.\n\n",select_num);
+		}
+		fclose(file);
+	}
+}
+
+void select_several_columns_all_rows(){//interface_sign:8_2
+	printf("Ö´ÐÐselect_several_columns_all_rows\n\n"); 
+}
+
 void analyze_command_line(char *command_line,command_tree root){//command line analyze module
 	
 	if(strcmp(command_line,"SHOW TIPS")==0){
@@ -618,6 +832,20 @@ void analyze_command_line(char *command_line,command_tree root){//command line a
 			}
 			if(analyze_q->interface_sign==7){
 				delete_by_col();
+			}
+			if(analyze_q->interface_sign==8&&strcmp(command_word[command_word_num-2],"FROM")==0){
+				if(strcmp(command_word[1],"*")==0){
+					select_all_columns_all_rows();
+				}
+				else{
+					select_several_columns_all_rows(); 
+				}
+			}
+			if(analyze_q->interface_sign==8&&strcmp(command_word[command_word_num-2],"FROM")!=0){
+				continue;
+			}
+			if(analyze_q->interface_sign==9){
+				select_all_columns_by_column();
 			}
 			break;
 		}
