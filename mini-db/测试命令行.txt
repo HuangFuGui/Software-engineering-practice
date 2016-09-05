@@ -55,3 +55,7 @@ SELECT * FROM client WHERE id = 2;
 SELECT * FROM client WHERE username = '»Æ¸´¹ó';
 
 SELECT id,username,address FROM client;
+
+SELECT id,username,address FROM client WHERE id = 5;
+
+SELECT id,username,address FROM client WHERE username = '»Æ¸´¹ó';

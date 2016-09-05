@@ -34,7 +34,7 @@ void delete_all();//I:6
 void delete_by_col();//I:7
 void select_all_columns_all_rows();//I:8
 void select_all_columns_by_column();//I:9
-void select_several_columns_all_rows();//I:8_2
+void select_several_columns(char *col_name,char *value);//I:8_9
 void analyze_command_line(char *command_line,command_tree root);
 
 int main(){
@@ -43,6 +43,7 @@ int main(){
 	printf("You can manage your database easily,remember following tips at first:\n\n");
 	tips();//show tips when clients launch this application 
 	printf("You can input 'SHOW TIPS;' to show these tips again,hope to have a good experience!\n\n");
+	printf("<COMMAND>:");
 	
 	build_command_tree();
 	
@@ -73,18 +74,18 @@ void tips(){//tips
 	printf("Show tables of the database:\n");
 	printf("\tSHOW TABLES;\n\n");
 	printf("Create and define table:\n");
-	printf("\tCREATE TABLE tb_name(\n");
-	printf("\t\tcol_name1 DATATYPE[(LENGTH)],\n");
-	printf("\t\tcol_name2 DATATYPE[(LENGTH)],\n");
-	printf("\t\t...\n");
-	printf("\t\tcol_nameN DATATYPE[(LENGTH)]\n");
-	printf("\t\t);\n\n");
+	printf("\tCREATE TABLE tb_name (\n");
+	printf("\tcol_name1 DATATYPE,\n");
+	printf("\tcol_name2 DATATYPE,\n");
+	printf("\t...\n");
+	printf("\tcol_nameN DATATYPE\n");
+	printf("\t);\n\n");
 	printf("Select data from table:\n");
 	printf("\tSELECT * FROM tb_name [WHERE col_name1 = ... AND col_name2 = ...] [GROUP BY col_name] [ORDER BY col_name [DESC]] [LIMIT...];\n");
 	printf("\tSELECT col_name1 [,col_name2] [,col_name3] FROM tb_name [WHERE col_name1 = ... AND col_name2 = ...] [GROUP BY col_name] [ORDER BY col_name [DESC]] [LIMIT...];\n\n");
 	printf("Insert data into table:\n");
-	printf("\tINSERT [INTO] tb_name VALUES(value1,value2,...,valueN);\n");
-	printf("\tINSERT [INTO] tb_name(col_name1,col_name2,[col_name...]) VALUES(value1,value2,[value...]);\n\n");
+	printf("\tINSERT INTO tb_name VALUES (value1,value2,...,valueN);\n");
+	printf("\tINSERT INTO tb_name (col_name1,col_name2,[col_name...]) VALUES (value1,value2,[value...]);\n\n");
 	printf("Update data:\n");
 	printf("\tUPDATE tb_name SET col_name1 = value1 [,col_name2 = value2] [,col_name3 = value3] [WHERE] [col_name = value];\n\n");	
 	printf("Delete data:\n");
@@ -366,9 +367,9 @@ void separate_command_by_space(){//command_word[0,i]
 		command_word_num = command_word_num - cut_command_word_num;
 	}
 	
-	for(i=0;i<command_word_num;i++){
+	/*for(i=0;i<command_word_num;i++){
 		printf("command_word: %s\n",command_word[i]);
-	}
+	}*/
 }
 
 int max_width(char *one_line){
@@ -429,7 +430,7 @@ void now_table(char *src){//table to use now
 void create_database(){//interface_sign:1
 	mkdir(command_word[2]);
 	now_database(command_word[2]);
-	printf("<INFO>:Create %s successfully!\n\n",database);
+	printf("<INFO>:Create %s successfully!\n\n<COMMAND>:",database);
 }
 
 void create_table(){//interface_sign:2
@@ -438,7 +439,7 @@ void create_table(){//interface_sign:2
 	FILE *file = fopen(table,"a+");
 	char field_info[1024] = "\0";
 	if(file==NULL){
-		printf("<INFO>:Create %s table failed!\n\n",command_word[2]);
+		printf("<INFO>:Create %s table failed!\n\n<COMMAND>:",command_word[2]);
 	}
 	else{
 		printf("<INFO>:Create %s table successfully!\n",command_word[2]); 
@@ -503,12 +504,12 @@ void desc_table(char *src){//interface_sign:3
 		}
 		fclose(file);
 	}
-	printf("\n\n");
+	printf("\n\n<COMMAND>:");
 }
 
 void use_database(){//interface_sign:4
 	now_database(command_word[1]);
-	printf("<INFO>:Database %s selected!\n\n",database);
+	printf("<INFO>:Database %s selected!\n\n<COMMAND>:",database);
 }
 
 void insert_values(){//interface_sign:5
@@ -530,13 +531,13 @@ void insert_values(){//interface_sign:5
 	}
 	file = fopen(table,"a+");
 	if(file==NULL){
-		printf("<ERROR>:Insert value failed!\n\n");
+		printf("<ERROR>:Insert value failed!\n\n<COMMAND>:");
 	}
 	else{
 		fputs(value,file);
 		fflush(file);
 		fclose(file);
-		printf("<INFO>:Insert value successfully!\n\n");
+		printf("<INFO>:Insert value successfully!\n\n<COMMAND>:");
 	}
 }
 
@@ -549,13 +550,13 @@ void delete_all(){//interface_sign:6
 	file = fopen(table,"a+");
 	char buffer[1024] = "\0";
 	if(file==NULL){
-		printf("<ERROR>:Delete failed!\n\n");
+		printf("<ERROR>:Delete failed!\n\n<COMMAND>:");
 	}
 	else{
 		now_table("temp");
 		FILE *temp = fopen(table,"a+");
 		if(temp==NULL){
-			printf("<ERROR>:Delete failed!\n\n");
+			printf("<ERROR>:Delete failed!\n\n<COMMAND>:");
 		}
 		else{
 			fgets(buffer,1024,file);
@@ -568,7 +569,7 @@ void delete_all(){//interface_sign:6
 			remove(true_table_name);
 			rename(table,true_table_name);
 			
-			printf("<INFO>:Delete all rows successfully!\n\n");
+			printf("<INFO>:Delete all rows successfully!\n\n<COMMAND>:");
 		}
 	}
 }
@@ -589,7 +590,7 @@ void delete_by_col(){//interface_sign:7
 	now_table("temp");
 	FILE *temp = fopen(table,"a+");
 	if(file==NULL||temp==NULL){
-		printf("<ERROR>:Delete failed!\n\n");
+		printf("<ERROR>:Delete failed!\n\n<COMMAND>:");
 	}
 	else{
 		fgets(buffer,1024,file);
@@ -647,10 +648,10 @@ void delete_by_col(){//interface_sign:7
 		rename(table,true_table_name);	
 		
 		if(delete_num>1){
-			printf("<INFO>:Delete successfully!%d rows deleted!\n\n",delete_num);	
+			printf("<INFO>:Delete successfully!%d rows deleted!\n\n<COMMAND>:",delete_num);	
 		}
 		else{
-			printf("<INFO>:Delete successfully!%d row deleted!\n\n",delete_num);	
+			printf("<INFO>:Delete successfully!%d row deleted!\n\n<COMMAND>:",delete_num);	
 		}
 	}
 }
@@ -663,7 +664,7 @@ void select_all_columns_all_rows(){//interface_sign:8
 	char field_word[12][50];
 	int k = 0,i = 0,j = 0,field_separate_flag = 0,select_num = 0;
 	if(file==NULL){
-		printf("<ERROR>:Query failed!\n\n");
+		printf("<ERROR>:Query failed!\n\n<COMMAND>:");
 	}
 	else{
 		fgets(buffer,1024,file);
@@ -698,10 +699,10 @@ void select_all_columns_all_rows(){//interface_sign:8
 		}
 	}
 	if(select_num>1){
-		printf("<INFO>:Query ok!%d rows return.\n\n",select_num);
+		printf("<INFO>:Query ok!%d rows returned.\n\n<COMMAND>:",select_num);
 	}
 	else{
-		printf("<INFO>:Query ok!%d row return.\n\n",select_num);
+		printf("<INFO>:Query ok!%d row returned.\n\n<COMMAND>:",select_num);
 	}
 	fclose(file);
 }
@@ -716,7 +717,7 @@ void select_all_columns_by_column(){//interface_sign:9
 	char select_col_value[100] = "\0";
 	
 	if(file==NULL){
-		printf("<ERROR>:Query failed!\n\n");
+		printf("<ERROR>:Query failed!\n\n<COMMAND>:");
 	}
 	else{
 		fgets(buffer,1024,file);
@@ -774,23 +775,149 @@ void select_all_columns_by_column(){//interface_sign:9
 			}
 		}
 		if(select_num>1){
-			printf("<INFO>:Query ok!%d rows return.\n\n",select_num);
+			printf("<INFO>:Query ok!%d rows returned.\n\n<COMMAND>:",select_num);
 		}
 		else{
-			printf("<INFO>:Query ok!%d row return.\n\n",select_num);
+			printf("<INFO>:Query ok!%d row returned.\n\n<COMMAND>:",select_num);
 		}
 		fclose(file);
 	}
 }
 
-void select_several_columns_all_rows(){//interface_sign:8_2
-	printf("Ö´ÐÐselect_several_columns_all_rows\n\n"); 
+void select_several_columns(char *col_name,char *value){//interface_sign:8_9
+	
+	now_table(command_word[3]);
+	file = fopen(table,"a+");
+	char buffer[1024] = "\0";
+	char field_word[12][50];
+	int k = 0,i = 0,j = 0,field_separate_flag = 0;
+	int require_query_column[12]={0};
+	char cur_query_column[50] = "\0";
+	int columns_num = 0,require_query_column_num = 0;
+	char table_column_value[300] = "\0";
+	int select_column_order = -1;
+	int value_i = 0;
+	int return_num = 0;
+	
+	if(file==NULL){
+		printf("<ERROR>:Query failed!\n\n<COMMAND>:");
+	} 
+	else{
+		fgets(buffer,1024,file);
+		for(k = 0;buffer[k]!='\n';k++){//get columns from database  -->  field_word[0,i]
+			if(buffer[k]==' '){
+				field_word[i][j++] = '\0';
+				field_separate_flag++;
+				continue;
+			}
+			if(buffer[k]=='\t'){
+				field_separate_flag++;
+				i++;
+				j = 0;
+				columns_num++;
+				continue;
+			}
+			if(field_separate_flag%2==0){
+				field_word[i][j++] = buffer[k];
+			}
+		}
+		
+		printf("%s\n",command_word[1]);
+		
+		j=0,i=0,k=-1;
+		while(1){
+			k++;
+			if(command_word[1][k]=='\t'||command_word[1][k]=='\0'){
+				cur_query_column[j++] = '\0';
+				for(i=0;i<columns_num+1;i++){
+					if(strcmp(cur_query_column,field_word[i])==0){
+						require_query_column[require_query_column_num++] = i;
+					}
+				}
+				j=0;
+				memset(cur_query_column,'\0',sizeof(cur_query_column));
+				if(command_word[1][k]=='\0'){
+					break;
+				}
+				continue;
+			}
+			cur_query_column[j++] = command_word[1][k];
+		}
+		
+		if(strcmp(col_name,"NULL")!=0&&strcmp(value,"NULL")!=0){
+			for(i=0;i<columns_num+1;i++){
+				if(strcmp(field_word[i],col_name)==0){
+					select_column_order = i;
+				}
+			}
+		}
+		while(fgets(buffer,1024,file)!=NULL){//start from the second row
+
+			field_separate_flag = 0;
+			j = 0,i=-1;	
+			value_i = 0;
+			
+			if(select_column_order!=-1){
+				memset(table_column_value,'\0',sizeof(table_column_value));
+				for(i = 0;buffer[i]!='\n';i++){
+					if(buffer[i]=='\t'){
+						field_separate_flag++;
+						continue;
+					}
+					if(field_separate_flag == select_column_order){
+						table_column_value[j++] = buffer[i];
+					}
+				}
+				table_column_value[j++] = '\0';
+			}
+			
+			field_separate_flag = 0,i=-1;
+			while(1){
+				
+				i++;
+				if(buffer[i]=='\t'){
+					field_separate_flag++;
+					continue;
+				}
+				
+				if(buffer[i]=='\n'){
+					if(select_column_order!=-1&&strcmp(table_column_value,value)==0||select_column_order==-1){
+						printf("\n");
+						return_num++;
+					}
+					break;
+				}
+
+				for(j=0;j<require_query_column_num;j++){
+					if(field_separate_flag==require_query_column[j]){
+						if((select_column_order!=-1&&strcmp(table_column_value,value)==0)||select_column_order==-1){
+							printf("%c",buffer[i]);
+							if(buffer[i+1]=='\t'){
+								printf("\t");
+							}
+						}	
+					}
+				}
+				
+			}		
+		}
+		
+		if(return_num>1){
+			printf("<INFO>:Query ok!%d rows returned.\n\n<COMMAND>:",return_num);
+		}
+		else{
+			printf("<INFO>:Query ok!%d row returned.\n\n<COMMAND>:",return_num);
+		}
+		
+		fclose(file);
+	} 
 }
 
 void analyze_command_line(char *command_line,command_tree root){//command line analyze module
 	
 	if(strcmp(command_line,"SHOW TIPS")==0){
 		tips();
+		printf("<COMMAND>:");
 		return;
 	}
 	
@@ -838,14 +965,17 @@ void analyze_command_line(char *command_line,command_tree root){//command line a
 					select_all_columns_all_rows();
 				}
 				else{
-					select_several_columns_all_rows(); 
+					select_several_columns("NULL","NULL");
 				}
 			}
 			if(analyze_q->interface_sign==8&&strcmp(command_word[command_word_num-2],"FROM")!=0){
 				continue;
 			}
-			if(analyze_q->interface_sign==9){
+			if(analyze_q->interface_sign==9&&strcmp(command_word[1],"*")==0){
 				select_all_columns_by_column();
+			}
+			if(analyze_q->interface_sign==9&&strcmp(command_word[1],"*")!=0){
+				select_several_columns(command_word[5],command_word[7]);
 			}
 			break;
 		}
