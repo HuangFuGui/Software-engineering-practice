@@ -35,6 +35,7 @@ void delete_by_col();//I:7
 void select_all_columns_all_rows();//I:8
 void select_all_columns_by_column();//I:9
 void select_several_columns(char *col_name,char *value);//I:8_9
+void update(char *col_name,char *value);//I:10,11
 void analyze_command_line(char *command_line,command_tree root);
 
 int main(){
@@ -298,6 +299,69 @@ void build_command_tree(){
 	node_array[i++] = q;//31;
 	node_array[30]->son[0] = q;
 	node_array[30]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"UPDATE");
+	node_array[i++] = q;//32
+	node_array[0]->son[6] = q;
+	node_array[0]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"{tb_name}");
+	node_array[i++] = q;//33
+	node_array[32]->son[0] = q;
+	node_array[32]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"SET");
+	node_array[i++] = q;//34
+	node_array[33]->son[0] = q;
+	node_array[33]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"{col_name}");
+	node_array[i++] = q;//35
+	node_array[34]->son[0] = q;
+	node_array[34]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"=");
+	node_array[i++] = q;//36
+	node_array[35]->son[0] = q;
+	node_array[35]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"{value}");
+	q->interface_sign = 10;
+	node_array[i++] = q;//37
+	node_array[36]->son[0] = q;
+	node_array[36]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"WHERE");
+	node_array[i++] = q;//38
+	node_array[37]->son[0] = q;
+	node_array[37]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"{col_name}");
+	node_array[i++] = q;//39
+	node_array[38]->son[0] = q;
+	node_array[38]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"=");
+	node_array[i++] = q;//40
+	node_array[39]->son[0] = q;
+	node_array[39]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"{value}");
+	q->interface_sign = 11;
+	node_array[i++] = q;//41
+	node_array[40]->son[0] = q;
+	node_array[40]->son_num++;
+	
 }
 
 command_tree traverse_command_tree(command_tree father,char *cur_command_word){
@@ -367,9 +431,53 @@ void separate_command_by_space(){//command_word[0,i]
 		command_word_num = command_word_num - cut_command_word_num;
 	}
 	
-	/*for(i=0;i<command_word_num;i++){
+	if(strcmp(command_word[0],"UPDATE")==0&&command_word_num>6&&strcmp(command_word[6],"WHERE")!=0){//for UPDATE several columns 
+		
+		int update_cols_helper = 0,cut_cols_num = 0;
+		i=6,j=0,k=0;
+		while(1){
+			if(strcmp(command_word[i],"WHERE")==0||i==command_word_num){
+				break;
+			}
+			if(strcmp(command_word[i],"=")==0){
+				update_cols_helper++;
+				i++; 
+				cut_cols_num++;
+				continue;
+			}
+			if(update_cols_helper%2==0){//column
+				for(j=0;command_word[3][j]!='\0';j++);
+				command_word[3][j++] = '\t';
+				for(k=0;command_word[i][k]!='\0';k++){
+					command_word[3][j++] = command_word[i][k];
+				}
+				command_word[3][j++] = '\0';
+			}else{//value
+				for(j=0;command_word[5][j]!='\0';j++);
+				command_word[5][j++] = '\t';
+				for(k=0;command_word[i][k]!='\0';k++){
+					command_word[5][j++] = command_word[i][k];
+				}
+				command_word[5][j++] = '\0';
+				
+				update_cols_helper++;
+			}
+			i++;
+		}
+		
+		if(strcmp(command_word[command_word_num-4],"WHERE")==0){
+			k = 6;
+			for(i = command_word_num-4;i<command_word_num;i++){
+				strcpy(command_word[k++],command_word[i]);
+			}
+		}
+		
+		command_word_num = command_word_num - cut_cols_num * 3;
+	}
+	
+	for(i=0;i<command_word_num;i++){
 		printf("command_word: %s\n",command_word[i]);
-	}*/
+	}
 }
 
 int max_width(char *one_line){
@@ -913,6 +1021,19 @@ void select_several_columns(char *col_name,char *value){//interface_sign:8_9
 	} 
 }
 
+void update(char *col_name,char *value){//interface_sign:10,11
+
+	now_table(command_word[1]);
+	file = fopen(table,"a+");
+	if(file==NULL){
+		printf("<ERROR>:Update failed!\n\n<COMMAND>:");
+	}
+	else{
+				
+		fclose(file);
+	}
+}
+
 void analyze_command_line(char *command_line,command_tree root){//command line analyze module
 	
 	if(strcmp(command_line,"SHOW TIPS")==0){
@@ -976,6 +1097,15 @@ void analyze_command_line(char *command_line,command_tree root){//command line a
 			}
 			if(analyze_q->interface_sign==9&&strcmp(command_word[1],"*")!=0){
 				select_several_columns(command_word[5],command_word[7]);
+			}
+			if(analyze_q->interface_sign==10&&strcmp(command_word[i+1],"WHERE")!=0){
+				update("NULL","NULL");
+			}
+			if(analyze_q->interface_sign==10&&strcmp(command_word[i+1],"WHERE")==0){
+				continue;
+			}
+			if(analyze_q->interface_sign==11){
+				update(command_word[command_word_num-3],command_word[command_word_num-1]);
 			}
 			break;
 		}

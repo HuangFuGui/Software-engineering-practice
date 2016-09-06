@@ -26,8 +26,6 @@ USE 我的数据库1;
 USE 我的数据库2;
 
 
-SELECT * FROM TABLE_NAME WHERE COL_NAME1 = ... AND COL_NAME2 = ... GROUP BY COL_NAME ORDER BY COL_NAME DESC LIMIT ...;
-
 INSERT INTO user VALUES (1,'黄复贵','qwe123','1151650717@qq.com','一个很爱写代码，很爱总结的程序员。');
 
 INSERT INTO user VALUES (1,'黄复贵','qwe123','1151650717@qq.com','一个很爱写代码,很爱总结的程序员.');
@@ -59,3 +57,12 @@ SELECT id,username,address FROM client;
 SELECT id,username,address FROM client WHERE id = 5;
 
 SELECT id,username,address FROM client WHERE username = '黄复贵';
+
+
+UPDATE client SET username = '杨千嬅是我女人';
+
+UPDATE client SET username = '杨千嬅是我女人' WHERE username = '黄复贵';
+
+UPDATE client SET username = '杨千嬅是我女人',password = '111',address = '香港，维多利亚海港';
+
+UPDATE client SET username = '杨千嬅是我女人',password = '111',address = '香港，维多利亚海港' WHERE username = '黄复贵';
