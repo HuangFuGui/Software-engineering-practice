@@ -475,9 +475,9 @@ void separate_command_by_space(){//command_word[0,i]
 		command_word_num = command_word_num - cut_cols_num * 3;
 	}
 	
-	for(i=0;i<command_word_num;i++){
+/*	for(i=0;i<command_word_num;i++){
 		printf("command_word: %s\n",command_word[i]);
-	}
+	}*/
 }
 
 int max_width(char *one_line){
@@ -1024,13 +1024,151 @@ void select_several_columns(char *col_name,char *value){//interface_sign:8_9
 void update(char *col_name,char *value){//interface_sign:10,11
 
 	now_table(command_word[1]);
+	char origin_table[300] = "\0";
+	strcpy(origin_table,table);
 	file = fopen(table,"a+");
-	if(file==NULL){
+	char buffer[1024] = "\0";
+	char field_line[1024] = "\0";
+	
+	int k = 0,i = 0,j = 0,field_separate_flag = 0;
+	char field_word[12][50];
+	
+	int require_update_column[12]={0};
+	char cur_update_column[50] = "\0";
+	int columns_num = 0,require_update_column_num = 0;
+	
+	char origin_columns_value[12][300];
+	char new_columns_value[12][300];
+	char new_content[1024] = "\0";
+	
+	int where_column = -1;
+	int need_update_of_where = 0;
+	int update_rows_num = 0;
+	now_table("temp");
+	FILE *temp = fopen(table,"a+");
+	if(file==NULL||temp==NULL){
 		printf("<ERROR>:Update failed!\n\n<COMMAND>:");
 	}
 	else{
-				
+		fgets(buffer,1024,file);
+		strcpy(field_line,buffer);
+		fputs(field_line,temp);
+		
+		for(k = 0;buffer[k]!='\n';k++){//get columns from database  -->  field_word[0,i]
+			if(buffer[k]==' '){
+				field_word[i][j++] = '\0';
+				if(strcmp(field_word[i],col_name)==0){
+					where_column = i;
+				}
+				field_separate_flag++;
+				continue;
+			}
+			if(buffer[k]=='\t'){
+				field_separate_flag++;
+				i++;
+				j = 0;
+				columns_num++;
+				continue;
+			}
+			if(field_separate_flag%2==0){
+				field_word[i][j++] = buffer[k];
+			}
+		}
+		
+		j=0,i=0,k=-1;
+		while(1){
+			k++;
+			if(command_word[3][k]=='\t'||command_word[3][k]=='\0'){
+				cur_update_column[j++] = '\0';
+				for(i=0;i<columns_num+1;i++){
+					if(strcmp(cur_update_column,field_word[i])==0){
+						require_update_column[require_update_column_num++] = i;
+					}
+				}
+				j=0;
+				memset(cur_update_column,'\0',sizeof(cur_update_column));
+				if(command_word[3][k]=='\0'){
+					break;
+				}
+				continue;
+			}
+			cur_update_column[j++] = command_word[3][k];
+		}	
+		
+		
+		i=0,j=0;
+		for(k=0;command_word[5][k]!='\0';k++){
+			if(command_word[5][k]=='\t'){
+				new_columns_value[i][j++] = '\0';
+				i++;
+				j=0;
+				continue;
+			}
+			new_columns_value[i][j++] = command_word[5][k];
+		}
+		new_columns_value[i][j++] = '\0';
+		
+		while(fgets(buffer,1024,file)!=NULL){
+			field_separate_flag = 0;
+			k=0,j=0,i=0;
+			memset(new_content,'\0',sizeof(new_content));
+			memset(origin_columns_value,'\0',sizeof(origin_columns_value));
+			need_update_of_where = 0;
+			
+			for(k=0;buffer[k]!='\n';k++){
+				if(buffer[k]=='\t'){
+					origin_columns_value[i][j++] = '\0';
+					i++;
+					j=0;
+					continue;
+				}
+				origin_columns_value[i][j++] = buffer[k];
+			}
+			origin_columns_value[i][j++] = '\0';
+			
+			if(where_column!=-1&&strcmp(origin_columns_value[where_column],value)==0){
+				need_update_of_where = 1;
+			}
+			
+			j=0;
+			for(i=0;i<require_update_column_num;i++){
+				strcpy(origin_columns_value[require_update_column[i]],new_columns_value[j++]);
+			}
+			
+			k=0,j=0;
+			for(i = 0;i<columns_num+1;i++){
+				for(j=0;origin_columns_value[i][j]!='\0';j++){
+					new_content[k++] = origin_columns_value[i][j];
+				}
+				if(i<columns_num){
+					new_content[k++] = '\t';
+				}
+				else{
+					new_content[k++] = '\n';
+				}
+			}
+
+			if(where_column==-1||need_update_of_where == 1){//no where
+				update_rows_num++;
+				fputs(new_content,temp);
+			}
+			else{
+				fputs(buffer,temp);
+			}
+			
+		}
 		fclose(file);
+		fclose(temp);
+		
+		remove(origin_table);
+		rename(table,origin_table);
+		
+		if(update_rows_num>1){
+			printf("<INFO>:Update ok!%d rows affected.\n\n<COMMAND>:",update_rows_num);
+		}
+		else{
+			printf("<INFO>:Update ok!%d row affected.\n\n<COMMAND>:",update_rows_num);
+		}
 	}
 }
 

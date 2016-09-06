@@ -63,6 +63,10 @@ UPDATE client SET username = '杨千嬅是我女人';
 
 UPDATE client SET username = '杨千嬅是我女人' WHERE username = '黄复贵';
 
+UPDATE client SET username = '杨千嬅是我女人',address = '香港，维多利亚海港';
+
 UPDATE client SET username = '杨千嬅是我女人',password = '111',address = '香港，维多利亚海港';
 
 UPDATE client SET username = '杨千嬅是我女人',password = '111',address = '香港，维多利亚海港' WHERE username = '黄复贵';
+
+UPDATE client SET username = '杨千嬅是我女人',address = '香港，维多利亚海港' WHERE id = 2;
