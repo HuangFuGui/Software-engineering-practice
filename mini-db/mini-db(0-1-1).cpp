@@ -9,6 +9,9 @@ char *database;
 char table[300] = "\0";
 FILE *file;
 
+char multi_query[20][500];
+int multi_query_num = 0; 
+
 typedef struct node{
 	char content[300];
 	struct node *son[10];
@@ -475,6 +478,19 @@ void separate_command_by_space(){//command_word[0,i]
 		command_word_num = command_word_num - cut_cols_num * 3;
 	}
 	
+	if(strcmp(command_word[0],"SELECT")==0&&strcmp(command_word[command_word_num-4],"AND")==0){
+		for(i=9;i<command_word_num;i++){
+			if(strcmp(command_word[i],"=")==0||strcmp(command_word[i],"AND")==0){
+				continue;
+			}
+			strcpy(multi_query[multi_query_num++],command_word[i]);
+		}
+		
+	/*	for(i=0;i<multi_query_num;i++){
+			printf("%s\n",multi_query[i]);
+		}*/
+	} 
+	
 /*	for(i=0;i<command_word_num;i++){
 		printf("command_word: %s\n",command_word[i]);
 	}*/
@@ -822,7 +838,11 @@ void select_all_columns_by_column(){//interface_sign:9
 	char buffer[1024] = "\0";
 	char field_word[12][50];
 	int k = 0,i = 0,j = 0,field_separate_flag = 0,select_num = 0;
-	char select_col_value[100] = "\0";
+	char table_value[12][300];
+	int cols_num = 0;
+	
+	int multi_query_cols_number[12] = {0};
+	int multi_query_cols_num = 0;
 	
 	if(file==NULL){
 		printf("<ERROR>:Query failed!\n\n<COMMAND>:");
@@ -833,6 +853,7 @@ void select_all_columns_by_column(){//interface_sign:9
 			if(buffer[k]==' '){
 				field_word[i][j++] = '\0';
 				field_separate_flag++;
+				cols_num++;
 				continue;
 			}
 			if(buffer[k]=='\t'){
@@ -861,23 +882,55 @@ void select_all_columns_by_column(){//interface_sign:9
 				break;
 			}
 		}
+		multi_query_cols_number[multi_query_cols_num++] = k;
+		for(k=0;k<multi_query_num;k++){
+			if(k%2==0){
+				for(j=0;j<=i;j++){
+					if(strcmp(multi_query[k],field_word[j])==0){
+						multi_query_cols_number[multi_query_cols_num++] = j;
+					}
+				}
+			}
+		}
 		
 		while(fgets(buffer,1024,file)!=NULL){//start from the second row
 			field_separate_flag = 0;
 			j = 0;
-			memset(select_col_value,'\0',sizeof(select_col_value));
-			for(i = 0;buffer[i]!='\n';i++){
-				if(buffer[i]=='\t'){
-					field_separate_flag++;
+			i=0;
+
+			for(k = 0;buffer[k]!='\n';k++){
+				if(buffer[k]=='\t'){
+					table_value[i][j++] = '\0';
+					i++;
+					j=0;
 					continue;
 				}
-				if(field_separate_flag == k){
-					select_col_value[j++] = buffer[i];
+				table_value[i][j++] = buffer[k];
+			}
+			table_value[i][j++] = '\0';
+			
+			int able_printf = 1;//able
+			k = 0;
+			for(i=0;i<multi_query_cols_num;i++){
+				if(i==0){
+					if(strcmp(table_value[multi_query_cols_number[i]],command_word[7])!=0){
+						able_printf = 0;//unable
+						break;
+					}
+				}
+				else{
+					k++;
+					if(strcmp(table_value[multi_query_cols_number[i]],multi_query[k])!=0){
+						able_printf = 0;//unable
+						break;
+					}
+					else{
+						k++;
+					}
 				}
 			}
-			select_col_value[j++] = '\0';
 			
-			if(strcmp(select_col_value,command_word[7])==0){
+			if(able_printf==1){
 				select_num++;
 				printf("%s",buffer);
 			}
@@ -888,6 +941,10 @@ void select_all_columns_by_column(){//interface_sign:9
 		else{
 			printf("<INFO>:Query ok!%d row returned.\n\n<COMMAND>:",select_num);
 		}
+		
+		memset(multi_query,'\0',sizeof(multi_query));
+		multi_query_num = 0;
+		
 		fclose(file);
 	}
 }
@@ -902,8 +959,10 @@ void select_several_columns(char *col_name,char *value){//interface_sign:8_9
 	int require_query_column[12]={0};
 	char cur_query_column[50] = "\0";
 	int columns_num = 0,require_query_column_num = 0;
-	char table_column_value[300] = "\0";
-	int select_column_order = -1;
+	char table_column_value[12][300];
+	int select_column_order[12];
+	select_column_order[0] = -1;
+	int select_column_order_num = 0;
 	int value_i = 0;
 	int return_num = 0;
 	
@@ -955,28 +1014,58 @@ void select_several_columns(char *col_name,char *value){//interface_sign:8_9
 		if(strcmp(col_name,"NULL")!=0&&strcmp(value,"NULL")!=0){
 			for(i=0;i<columns_num+1;i++){
 				if(strcmp(field_word[i],col_name)==0){
-					select_column_order = i;
+					select_column_order[select_column_order_num++] = i;
+				}
+			}
+			for(i=0;i<multi_query_num;i++){
+				if(i%2==0){
+					for(j=0;j<columns_num+1;j++){
+						if(strcmp(multi_query[i],field_word[j])==0){
+							select_column_order[select_column_order_num++] = j;
+						}
+					}
 				}
 			}
 		}
+		
 		while(fgets(buffer,1024,file)!=NULL){//start from the second row
 
 			field_separate_flag = 0;
-			j = 0,i=-1;	
+			j = 0,k=0,i=0;
 			value_i = 0;
 			
-			if(select_column_order!=-1){
-				memset(table_column_value,'\0',sizeof(table_column_value));
-				for(i = 0;buffer[i]!='\n';i++){
-					if(buffer[i]=='\t'){
-						field_separate_flag++;
+			if(select_column_order[0]!=-1){
+				for(k = 0;buffer[k]!='\n';k++){
+					if(buffer[k]=='\t'){
+						table_column_value[i][j++] = '\0';
+						i++;
+						j=0;
 						continue;
 					}
-					if(field_separate_flag == select_column_order){
-						table_column_value[j++] = buffer[i];
+					table_column_value[i][j++] = buffer[k];
+				}
+				table_column_value[i][j++] = '\0';
+			}
+			
+			int able_printf = 1;//able
+			k = 0;
+			for(i=0;i<select_column_order_num;i++){
+				if(i==0){
+					if(strcmp(table_column_value[select_column_order[i]],command_word[7])!=0){
+						able_printf = 0;//unable
+						break;
 					}
 				}
-				table_column_value[j++] = '\0';
+				else{
+					k++;
+					if(strcmp(table_column_value[select_column_order[i]],multi_query[k])!=0){
+						able_printf = 0;//unable
+						break;
+					}
+					else{
+						k++;
+					}
+				}
 			}
 			
 			field_separate_flag = 0,i=-1;
@@ -989,7 +1078,7 @@ void select_several_columns(char *col_name,char *value){//interface_sign:8_9
 				}
 				
 				if(buffer[i]=='\n'){
-					if(select_column_order!=-1&&strcmp(table_column_value,value)==0||select_column_order==-1){
+					if(select_column_order[0]!=-1&&able_printf==1||select_column_order[0]==-1){
 						printf("\n");
 						return_num++;
 					}
@@ -998,7 +1087,7 @@ void select_several_columns(char *col_name,char *value){//interface_sign:8_9
 
 				for(j=0;j<require_query_column_num;j++){
 					if(field_separate_flag==require_query_column[j]){
-						if((select_column_order!=-1&&strcmp(table_column_value,value)==0)||select_column_order==-1){
+						if((select_column_order[0]!=-1&&able_printf==1)||select_column_order[0]==-1){
 							printf("%c",buffer[i]);
 							if(buffer[i+1]=='\t'){
 								printf("\t");
@@ -1017,6 +1106,8 @@ void select_several_columns(char *col_name,char *value){//interface_sign:8_9
 			printf("<INFO>:Query ok!%d row returned.\n\n<COMMAND>:",return_num);
 		}
 		
+		memset(multi_query,'\0',sizeof(multi_query));
+		multi_query_num = 0;
 		fclose(file);
 	} 
 }

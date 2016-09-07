@@ -50,13 +50,17 @@ SELECT * FROM client;
 
 SELECT * FROM client WHERE id = 2;
 
-SELECT * FROM client WHERE username = 'ª∆∏¥πÛ';
+SELECT * FROM client WHERE username = 'ª∆∏¥πÛ' AND username = 'ª∆∏¥πÛ' AND email = '115@qq.com';
 
 SELECT id,username,address FROM client;
 
 SELECT id,username,address FROM client WHERE id = 5;
 
 SELECT id,username,address FROM client WHERE username = 'ª∆∏¥πÛ';
+
+SELECT id,username,address FROM client WHERE id = 6 AND email = '115@qq.com';
+
+SELECT id,username,address FROM client WHERE id = 6 AND username = 'ª∆∏¥πÛ' AND email = '115@qq.com';
 
 
 UPDATE client SET username = '—Ó«ßã√ «Œ“≈Æ»À';
