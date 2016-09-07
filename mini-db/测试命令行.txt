@@ -52,6 +52,8 @@ SELECT * FROM client WHERE id = 2;
 
 SELECT * FROM client WHERE username = 'ª∆∏¥πÛ' AND username = 'ª∆∏¥πÛ' AND email = '115@qq.com';
 
+SELECT * FROM client WHERE username = 'ª∆∏¥πÛ' OR username = 'ª∆∏¥πÛ' OR email = '115@qq.com';
+
 SELECT id,username,address FROM client;
 
 SELECT id,username,address FROM client WHERE id = 5;
@@ -61,6 +63,18 @@ SELECT id,username,address FROM client WHERE username = 'ª∆∏¥πÛ';
 SELECT id,username,address FROM client WHERE id = 6 AND email = '115@qq.com';
 
 SELECT id,username,address FROM client WHERE id = 6 AND username = 'ª∆∏¥πÛ' AND email = '115@qq.com';
+
+SELECT id,username,address FROM client WHERE id = 6 OR username = 'ª∆∏¥πÛ' OR email = '115@qq.com';
+
+SELECT * FROM client WHERE username NOT IN ('—Ó«ßã√ «Œ“≈Æ»À','ª∆∏¥πÛ');
+
+SELECT * FROM client WHERE id NOT IN (1,2,6,10);
+
+SELECT id,username,email FROM client WHERE id NOT IN (1,2,6,10);
+
+SELECT id,username,email FROM client WHERE email NOT IN ('1151650717@qq.com','115');
+
+SELECT id,username,address FROM client WHERE username NOT IN ('—Ó«ßã√ «Œ“≈Æ»À','ª∆∏¥πÛ');
 
 
 UPDATE client SET username = '—Ó«ßã√ «Œ“≈Æ»À';

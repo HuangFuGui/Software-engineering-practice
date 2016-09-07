@@ -11,6 +11,10 @@ FILE *file;
 
 char multi_query[20][500];
 int multi_query_num = 0; 
+int and_or = 0;//AND:1  OR:2
+
+char not_in_value[10][300];
+int not_in_num = 0;
 
 typedef struct node{
 	char content[300];
@@ -39,6 +43,7 @@ void select_all_columns_all_rows();//I:8
 void select_all_columns_by_column();//I:9
 void select_several_columns(char *col_name,char *value);//I:8_9
 void update(char *col_name,char *value);//I:10,11
+void select_not_in();//I:9_not_in
 void analyze_command_line(char *command_line,command_tree root);
 
 int main(){
@@ -365,6 +370,20 @@ void build_command_tree(){
 	node_array[40]->son[0] = q;
 	node_array[40]->son_num++;
 	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"NOT");
+	node_array[i++] = q;//42
+	node_array[29]->son[1] = q;
+	node_array[29]->son_num++;
+	
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content,"IN");
+	node_array[i++] = q;//43
+	node_array[42]->son[0] = q;
+	node_array[42]->son_num++;
+	node_array[43]->son[0] = node_array[31];
+	node_array[43]->son_num++;
+	
 }
 
 command_tree traverse_command_tree(command_tree father,char *cur_command_word){
@@ -472,26 +491,40 @@ void separate_command_by_space(){//command_word[0,i]
 			k = 6;
 			for(i = command_word_num-4;i<command_word_num;i++){
 				strcpy(command_word[k++],command_word[i]);
+				
 			}
 		}
 		
 		command_word_num = command_word_num - cut_cols_num * 3;
 	}
 	
-	if(strcmp(command_word[0],"SELECT")==0&&strcmp(command_word[command_word_num-4],"AND")==0){
+	if((strcmp(command_word[0],"SELECT")==0&&strcmp(command_word[command_word_num-4],"AND")==0)||(strcmp(command_word[0],"SELECT")==0&&strcmp(command_word[command_word_num-4],"OR")==0)){
+		
+		if(strcmp(command_word[command_word_num-4],"AND")==0){
+			and_or = 1;//AND
+		}
+		else{
+			and_or = 2;//OR
+		}
+		
 		for(i=9;i<command_word_num;i++){
-			if(strcmp(command_word[i],"=")==0||strcmp(command_word[i],"AND")==0){
+			if(strcmp(command_word[i],"=")==0||strcmp(command_word[i],"AND")==0||strcmp(command_word[i],"OR")==0){
 				continue;
 			}
 			strcpy(multi_query[multi_query_num++],command_word[i]);
 		}
-		
-	/*	for(i=0;i<multi_query_num;i++){
-			printf("%s\n",multi_query[i]);
-		}*/
 	} 
 	
-/*	for(i=0;i<command_word_num;i++){
+	if(strcmp(command_word[0],"SELECT")==0&&command_word_num>6&&strcmp(command_word[6],"NOT")==0){//NOT IN (...)
+		int k=0;
+		for(i=8;i<command_word_num;i++){
+			strcpy(not_in_value[not_in_num++],command_word[i]);
+			k++;
+		}
+		command_word_num = command_word_num-k+1;
+	}
+	
+	/*for(i=0;i<command_word_num;i++){
 		printf("command_word: %s\n",command_word[i]);
 	}*/
 }
@@ -909,23 +942,48 @@ void select_all_columns_by_column(){//interface_sign:9
 			}
 			table_value[i][j++] = '\0';
 			
-			int able_printf = 1;//able
-			k = 0;
-			for(i=0;i<multi_query_cols_num;i++){
-				if(i==0){
-					if(strcmp(table_value[multi_query_cols_number[i]],command_word[7])!=0){
-						able_printf = 0;//unable
-						break;
-					}
-				}
-				else{
-					k++;
-					if(strcmp(table_value[multi_query_cols_number[i]],multi_query[k])!=0){
-						able_printf = 0;//unable
-						break;
+			int able_printf;
+			if(and_or==1){//AND
+				able_printf = 1;//able
+				k = 0;
+				for(i=0;i<multi_query_cols_num;i++){
+					if(i==0){
+						if(strcmp(table_value[multi_query_cols_number[i]],command_word[7])!=0){
+							able_printf = 0;//unable
+							break;
+						}
 					}
 					else{
 						k++;
+						if(strcmp(table_value[multi_query_cols_number[i]],multi_query[k])!=0){
+							able_printf = 0;//unable
+							break;
+						}
+						else{
+							k++;
+						}
+					}
+				}
+			}
+			else{//OR
+				able_printf = 0;//unable
+				k=0;
+				for(i=0;i<multi_query_cols_num;i++){
+					if(i==0){
+						if(strcmp(table_value[multi_query_cols_number[i]],command_word[7])==0){
+							able_printf = 1;//able
+							break;
+						}
+					}
+					else{
+						k++;
+						if(strcmp(table_value[multi_query_cols_number[i]],multi_query[k])==0){
+							able_printf = 1;//able
+							break;
+						}
+						else{
+							k++;
+						}
 					}
 				}
 			}
@@ -1047,23 +1105,48 @@ void select_several_columns(char *col_name,char *value){//interface_sign:8_9
 				table_column_value[i][j++] = '\0';
 			}
 			
-			int able_printf = 1;//able
-			k = 0;
-			for(i=0;i<select_column_order_num;i++){
-				if(i==0){
-					if(strcmp(table_column_value[select_column_order[i]],command_word[7])!=0){
-						able_printf = 0;//unable
-						break;
-					}
-				}
-				else{
-					k++;
-					if(strcmp(table_column_value[select_column_order[i]],multi_query[k])!=0){
-						able_printf = 0;//unable
-						break;
+			int able_printf;
+			if(and_or==1){//AND
+				able_printf = 1;//able
+				k = 0;
+				for(i=0;i<select_column_order_num;i++){
+					if(i==0){
+						if(strcmp(table_column_value[select_column_order[i]],command_word[7])!=0){
+							able_printf = 0;//unable
+							break;
+						}
 					}
 					else{
 						k++;
+						if(strcmp(table_column_value[select_column_order[i]],multi_query[k])!=0){
+							able_printf = 0;//unable
+							break;
+						}
+						else{
+							k++;
+						}
+					}
+				}
+			}
+			else{//OR
+				able_printf = 0;//unable
+				k=0;
+				for(i=0;i<select_column_order_num;i++){
+					if(i==0){
+						if(strcmp(table_column_value[select_column_order[i]],command_word[7])==0){
+							able_printf = 1;//able
+							break;
+						}
+					}
+					else{
+						k++;
+						if(strcmp(table_column_value[select_column_order[i]],multi_query[k])==0){
+							able_printf = 1;//able
+							break;
+						}
+						else{
+							k++;
+						}
 					}
 				}
 			}
@@ -1263,6 +1346,155 @@ void update(char *col_name,char *value){//interface_sign:10,11
 	}
 }
 
+void select_not_in(){//interface_sign:9_not_in
+	
+	now_table(command_word[3]);
+	file = fopen(table,"a+");
+	char buffer[1024] = "\0";
+	char field_word[12][50];
+	int k = 0,i = 0,j = 0,field_separate_flag = 0,cols_num = 0;
+	char table_value[12][300];
+	int return_num = 0;
+	
+	char cur_query_column[1024] = "\0";
+	char require_query_column[12] = {0};
+	int require_query_column_num = 0;
+	
+	if(file==NULL){
+		printf("<ERROR>:Query failed!\n\n<COMMAND>:");
+	}
+	else{
+		fgets(buffer,1024,file);
+		for(k = 0;buffer[k]!='\n';k++){//get columns from database  -->  field_word[0,i]
+			if(buffer[k]==' '){
+				field_word[i][j++] = '\0';
+				field_separate_flag++;
+				cols_num++;
+				continue;
+			}
+			if(buffer[k]=='\t'){
+				field_separate_flag++;
+				i++;
+				j = 0;
+				continue;
+			}
+			if(field_separate_flag%2==0){
+				field_word[i][j++] = buffer[k];
+			}
+		}
+		
+		for(k=0;k<cols_num;k++){
+			if(strcmp(field_word[k],command_word[5])==0){
+				break;
+			}
+		}
+		int judge_column = k;
+		
+		if(strcmp(command_word[1],"*")!=0){
+			j=0,i=0,k=-1;
+			while(1){
+				k++;
+				if(command_word[1][k]=='\t'||command_word[1][k]=='\0'){
+					cur_query_column[j++] = '\0';
+					for(i=0;i<cols_num;i++){
+						if(strcmp(cur_query_column,field_word[i])==0){
+							require_query_column[require_query_column_num++] = i;
+						}
+					}
+					j=0;
+					memset(cur_query_column,'\0',sizeof(cur_query_column));
+					if(command_word[1][k]=='\0'){
+						break;
+					}
+					continue;
+				}
+				cur_query_column[j++] = command_word[1][k];
+			}
+			for(k=0;k<require_query_column_num;k++){
+				printf("%s",field_word[require_query_column[k]]);
+				if(k<require_query_column_num-1){
+					printf("\t");
+				}
+				else{
+					printf("\n");
+				} 
+			}
+		}
+		else{
+			for(k=0;k<cols_num;k++){
+				printf("%s",field_word[k]);
+				if(k<cols_num-1){
+					printf("\t");
+				}
+				else{
+					printf("\n");
+				} 
+			}
+		}
+		
+		int able_printf;
+		while(fgets(buffer,1024,file)!=NULL){
+			
+			i=0,j=0;
+			for(k=0;buffer[k]!='\n';k++){
+				if(buffer[k]=='\t'){
+					table_value[i][j++] = '\0';
+					i++;
+					j=0;
+					continue;
+				}
+				table_value[i][j++] = buffer[k];
+			}
+			table_value[i][j++] = '\0';
+				
+			able_printf = 1;//able
+			for(k=0;k<not_in_num;k++){
+				if(strcmp(table_value[judge_column],not_in_value[k])==0){
+					able_printf = 0;
+					break;
+				}
+			}
+				
+			if(able_printf==1){
+				if(strcmp(command_word[1],"*")==0){
+					return_num++;
+					printf("%s",buffer);
+				}
+				else{
+					return_num++;
+					field_separate_flag = 0;
+					for(k=0;buffer[k]!='\n';k++){
+						if(buffer[k]=='\t'){
+							field_separate_flag++;
+							continue;
+						}
+						for(i = 0;i<require_query_column_num;i++){
+							if(field_separate_flag==require_query_column[i]){
+								printf("%c",buffer[k]);
+								if(buffer[k+1]=='\t'){
+									printf("\t");
+								}
+							}
+						}
+					}
+					printf("\n");	
+				}	
+			}		
+		}
+		
+		if(return_num>1){
+			printf("<INFO>:Query ok!%d rows returned.\n\n<COMMAND>:",return_num);
+		}
+		else{
+			printf("<INFO>:Query ok!%d row returned.\n\n<COMMAND>:",return_num);
+		}
+			
+		memset(not_in_value,'\0',sizeof(not_in_value));
+		not_in_num = 0;
+		fclose(file);
+	}
+}
+
 void analyze_command_line(char *command_line,command_tree root){//command line analyze module
 	
 	if(strcmp(command_line,"SHOW TIPS")==0){
@@ -1322,10 +1554,20 @@ void analyze_command_line(char *command_line,command_tree root){//command line a
 				continue;
 			}
 			if(analyze_q->interface_sign==9&&strcmp(command_word[1],"*")==0){
-				select_all_columns_by_column();
+				if(strcmp(command_word[command_word_num-2],"IN")!=0){
+					select_all_columns_by_column();
+				}
+				else{
+					select_not_in();
+				}
 			}
 			if(analyze_q->interface_sign==9&&strcmp(command_word[1],"*")!=0){
-				select_several_columns(command_word[5],command_word[7]);
+				if(strcmp(command_word[command_word_num-2],"IN")!=0){
+					select_several_columns(command_word[5],command_word[7]);
+				}
+				else{
+					select_not_in();
+				}
 			}
 			if(analyze_q->interface_sign==10&&strcmp(command_word[i+1],"WHERE")!=0){
 				update("NULL","NULL");
