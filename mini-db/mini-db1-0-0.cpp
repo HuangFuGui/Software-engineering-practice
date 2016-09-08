@@ -2,6 +2,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include<dir.h>
+#include<time.h>
 
 char command_char,command_line[300],command_word[100][100];
 int command_word_num = 0;
@@ -15,6 +16,8 @@ int and_or = 0;//AND:1  OR:2
 
 char not_in_value[10][300];
 int not_in_num = 0;
+
+double t1,t2;
 
 typedef struct node{
 	char content[300];
@@ -65,11 +68,20 @@ int main(){
 			getchar(); //for Enter key
 			command_line[input_i] = '\0';
 			input_i=0;
+			
+			t1 = clock();
+			
 			analyze_command_line(command_line,node_array[0]);
+			
+			t2 = clock();
 			
 			memset(command_line,'\0',sizeof(command_line));
 			memset(command_word,'\0',sizeof(command_word));
 			command_word_num = 0;
+			
+			printf("Query time: %.5lfms\n",t2-t1);
+			
+			printf("\n<COMMAND>:");
 		}
 	}
 }
@@ -491,7 +503,6 @@ void separate_command_by_space(){//command_word[0,i]
 			k = 6;
 			for(i = command_word_num-4;i<command_word_num;i++){
 				strcpy(command_word[k++],command_word[i]);
-				
 			}
 		}
 		
@@ -587,7 +598,7 @@ void now_table(char *src){//table to use now
 void create_database(){//interface_sign:1
 	mkdir(command_word[2]);
 	now_database(command_word[2]);
-	printf("<INFO>:Create %s successfully!\n\n<COMMAND>:",database);
+	printf("<INFO>:Create %s successfully!\n",database);
 }
 
 void create_table(){//interface_sign:2
@@ -596,7 +607,7 @@ void create_table(){//interface_sign:2
 	FILE *file = fopen(table,"a+");
 	char field_info[1024] = "\0";
 	if(file==NULL){
-		printf("<INFO>:Create %s table failed!\n\n<COMMAND>:",command_word[2]);
+		printf("<INFO>:Create %s table failed!\n",command_word[2]);
 	}
 	else{
 		printf("<INFO>:Create %s table successfully!\n",command_word[2]); 
@@ -661,12 +672,12 @@ void desc_table(char *src){//interface_sign:3
 		}
 		fclose(file);
 	}
-	printf("\n\n<COMMAND>:");
+	printf("\n");
 }
 
 void use_database(){//interface_sign:4
 	now_database(command_word[1]);
-	printf("<INFO>:Database %s selected!\n\n<COMMAND>:",database);
+	printf("<INFO>:Database %s selected!\n",database);
 }
 
 void insert_values(){//interface_sign:5
@@ -688,13 +699,13 @@ void insert_values(){//interface_sign:5
 	}
 	file = fopen(table,"a+");
 	if(file==NULL){
-		printf("<ERROR>:Insert value failed!\n\n<COMMAND>:");
+		printf("<ERROR>:Insert value failed!\n");
 	}
 	else{
 		fputs(value,file);
 		fflush(file);
 		fclose(file);
-		printf("<INFO>:Insert value successfully!\n\n<COMMAND>:");
+		printf("<INFO>:Insert value successfully!\n");
 	}
 }
 
@@ -707,13 +718,13 @@ void delete_all(){//interface_sign:6
 	file = fopen(table,"a+");
 	char buffer[1024] = "\0";
 	if(file==NULL){
-		printf("<ERROR>:Delete failed!\n\n<COMMAND>:");
+		printf("<ERROR>:Delete failed!\n");
 	}
 	else{
 		now_table("temp");
 		FILE *temp = fopen(table,"a+");
 		if(temp==NULL){
-			printf("<ERROR>:Delete failed!\n\n<COMMAND>:");
+			printf("<ERROR>:Delete failed!\n");
 		}
 		else{
 			fgets(buffer,1024,file);
@@ -726,7 +737,7 @@ void delete_all(){//interface_sign:6
 			remove(true_table_name);
 			rename(table,true_table_name);
 			
-			printf("<INFO>:Delete all rows successfully!\n\n<COMMAND>:");
+			printf("<INFO>:Delete all rows successfully!\n");
 		}
 	}
 }
@@ -747,7 +758,7 @@ void delete_by_col(){//interface_sign:7
 	now_table("temp");
 	FILE *temp = fopen(table,"a+");
 	if(file==NULL||temp==NULL){
-		printf("<ERROR>:Delete failed!\n\n<COMMAND>:");
+		printf("<ERROR>:Delete failed!\n");
 	}
 	else{
 		fgets(buffer,1024,file);
@@ -805,10 +816,10 @@ void delete_by_col(){//interface_sign:7
 		rename(table,true_table_name);	
 		
 		if(delete_num>1){
-			printf("<INFO>:Delete successfully!%d rows deleted!\n\n<COMMAND>:",delete_num);	
+			printf("<INFO>:Delete successfully!%d rows deleted!\n",delete_num);	
 		}
 		else{
-			printf("<INFO>:Delete successfully!%d row deleted!\n\n<COMMAND>:",delete_num);	
+			printf("<INFO>:Delete successfully!%d row deleted!\n",delete_num);	
 		}
 	}
 }
@@ -821,7 +832,7 @@ void select_all_columns_all_rows(){//interface_sign:8
 	char field_word[12][50];
 	int k = 0,i = 0,j = 0,field_separate_flag = 0,select_num = 0;
 	if(file==NULL){
-		printf("<ERROR>:Query failed!\n\n<COMMAND>:");
+		printf("<ERROR>:Query failed!\n");
 	}
 	else{
 		fgets(buffer,1024,file);
@@ -856,10 +867,10 @@ void select_all_columns_all_rows(){//interface_sign:8
 		}
 	}
 	if(select_num>1){
-		printf("<INFO>:Query ok!%d rows returned.\n\n<COMMAND>:",select_num);
+		printf("<INFO>:Query ok!%d rows returned.\n",select_num);
 	}
 	else{
-		printf("<INFO>:Query ok!%d row returned.\n\n<COMMAND>:",select_num);
+		printf("<INFO>:Query ok!%d row returned.\n",select_num);
 	}
 	fclose(file);
 }
@@ -878,7 +889,7 @@ void select_all_columns_by_column(){//interface_sign:9
 	int multi_query_cols_num = 0;
 	
 	if(file==NULL){
-		printf("<ERROR>:Query failed!\n\n<COMMAND>:");
+		printf("<ERROR>:Query failed!\n");
 	}
 	else{
 		fgets(buffer,1024,file);
@@ -994,10 +1005,10 @@ void select_all_columns_by_column(){//interface_sign:9
 			}
 		}
 		if(select_num>1){
-			printf("<INFO>:Query ok!%d rows returned.\n\n<COMMAND>:",select_num);
+			printf("<INFO>:Query ok!%d rows returned.\n",select_num);
 		}
 		else{
-			printf("<INFO>:Query ok!%d row returned.\n\n<COMMAND>:",select_num);
+			printf("<INFO>:Query ok!%d row returned.\n",select_num);
 		}
 		
 		memset(multi_query,'\0',sizeof(multi_query));
@@ -1025,7 +1036,7 @@ void select_several_columns(char *col_name,char *value){//interface_sign:8_9
 	int return_num = 0;
 	
 	if(file==NULL){
-		printf("<ERROR>:Query failed!\n\n<COMMAND>:");
+		printf("<ERROR>:Query failed!\n");
 	} 
 	else{
 		fgets(buffer,1024,file);
@@ -1183,10 +1194,10 @@ void select_several_columns(char *col_name,char *value){//interface_sign:8_9
 		}
 		
 		if(return_num>1){
-			printf("<INFO>:Query ok!%d rows returned.\n\n<COMMAND>:",return_num);
+			printf("<INFO>:Query ok!%d rows returned.\n",return_num);
 		}
 		else{
-			printf("<INFO>:Query ok!%d row returned.\n\n<COMMAND>:",return_num);
+			printf("<INFO>:Query ok!%d row returned.\n",return_num);
 		}
 		
 		memset(multi_query,'\0',sizeof(multi_query));
@@ -1221,7 +1232,7 @@ void update(char *col_name,char *value){//interface_sign:10,11
 	now_table("temp");
 	FILE *temp = fopen(table,"a+");
 	if(file==NULL||temp==NULL){
-		printf("<ERROR>:Update failed!\n\n<COMMAND>:");
+		printf("<ERROR>:Update failed!\n");
 	}
 	else{
 		fgets(buffer,1024,file);
@@ -1338,10 +1349,10 @@ void update(char *col_name,char *value){//interface_sign:10,11
 		rename(table,origin_table);
 		
 		if(update_rows_num>1){
-			printf("<INFO>:Update ok!%d rows affected.\n\n<COMMAND>:",update_rows_num);
+			printf("<INFO>:Update ok!%d rows affected.\n",update_rows_num);
 		}
 		else{
-			printf("<INFO>:Update ok!%d row affected.\n\n<COMMAND>:",update_rows_num);
+			printf("<INFO>:Update ok!%d row affected.\n",update_rows_num);
 		}
 	}
 }
@@ -1361,7 +1372,7 @@ void select_not_in(){//interface_sign:9_not_in
 	int require_query_column_num = 0;
 	
 	if(file==NULL){
-		printf("<ERROR>:Query failed!\n\n<COMMAND>:");
+		printf("<ERROR>:Query failed!\n");
 	}
 	else{
 		fgets(buffer,1024,file);
@@ -1483,10 +1494,10 @@ void select_not_in(){//interface_sign:9_not_in
 		}
 		
 		if(return_num>1){
-			printf("<INFO>:Query ok!%d rows returned.\n\n<COMMAND>:",return_num);
+			printf("<INFO>:Query ok!%d rows returned.\n",return_num);
 		}
 		else{
-			printf("<INFO>:Query ok!%d row returned.\n\n<COMMAND>:",return_num);
+			printf("<INFO>:Query ok!%d row returned.\n",return_num);
 		}
 			
 		memset(not_in_value,'\0',sizeof(not_in_value));
@@ -1499,7 +1510,6 @@ void analyze_command_line(char *command_line,command_tree root){//command line a
 	
 	if(strcmp(command_line,"SHOW TIPS")==0){
 		tips();
-		printf("<COMMAND>:");
 		return;
 	}
 	
