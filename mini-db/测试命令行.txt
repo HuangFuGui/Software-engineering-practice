@@ -76,6 +76,14 @@ SELECT id,username,email FROM client WHERE email NOT IN ('1151650717@qq.com','11
 
 SELECT id,username,address FROM client WHERE username NOT IN ('杨千嬅是我女人','黄复贵');
 
+SELECT * FROM user WHERE password = '123456' AND email = '1151650717@qq.com' AND id NOT IN (1,2,12);
+
+SELECT id,username FROM user WHERE password = '123456' AND email = '1151650717@qq.com' AND id NOT IN (1,2,12);
+
+SELECT * FROM user WHERE username = '杨千嬅' OR sex = '女' OR id NOT IN (1,2,12);
+
+SELECT id,username,password FROM user WHERE username = '杨千嬅' OR sex = '女' OR id NOT IN (1,2,12);
+
 
 UPDATE client SET username = '杨千嬅是我女人';
 

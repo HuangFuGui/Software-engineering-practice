@@ -14,8 +14,14 @@ char multi_query[20][500];
 int multi_query_num = 0; 
 int and_or = 0;//AND:1  OR:2
 
+int is_not_in = 0;
+int not_i = 0;
 char not_in_value[10][300];
 int not_in_num = 0;
+char not_in_before[10][300];
+int not_in_before_num = 0;
+int not_in_and_or = 0;
+
 
 double t1,t2;
 
@@ -438,6 +444,10 @@ void separate_command_by_space(){//command_word[0,i]
 		}
 		if(command_line[k]==' '||command_line[k]==','){
 			command_word[i][j] = '\0';
+			if(strcmp(command_word[i],"NOT")==0){
+				is_not_in = 1;
+				not_i = i;
+			}
 			i++;
 			j=0;
 		}
@@ -463,6 +473,10 @@ void separate_command_by_space(){//command_word[0,i]
 			strcpy(command_word[k++],command_word[j]);
 		}
 		command_word_num = command_word_num - cut_command_word_num;
+		
+		if(is_not_in==1){
+			not_i = not_i - cut_command_word_num;
+		}
 	}
 	
 	if(strcmp(command_word[0],"UPDATE")==0&&command_word_num>6&&strcmp(command_word[6],"WHERE")!=0){//for UPDATE several columns 
@@ -526,13 +540,23 @@ void separate_command_by_space(){//command_word[0,i]
 		}
 	} 
 	
-	if(strcmp(command_word[0],"SELECT")==0&&command_word_num>6&&strcmp(command_word[6],"NOT")==0){//NOT IN (...)
+	if(is_not_in==1){//NOT IN (...)
 		int k=0;
-		for(i=8;i<command_word_num;i++){
+		for(i=not_i+2;i<command_word_num;i++){
 			strcpy(not_in_value[not_in_num++],command_word[i]);
 			k++;
 		}
 		command_word_num = command_word_num-k+1;
+		
+		for(i=5;i<=not_i-2;i++){//multi AND/OR of NOT IN
+			if(strcmp(command_word[i],"=")==0||strcmp(command_word[i],"AND")==0||strcmp(command_word[i],"OR")==0){	
+				if(strcmp(command_word[i],"AND")==0){
+					not_in_and_or = 1;
+				}
+				continue;
+			}
+			strcpy(not_in_before[not_in_before_num++],command_word[i]);
+		}
 	}
 	
 	/*for(i=0;i<command_word_num;i++){
@@ -1371,6 +1395,9 @@ void select_not_in(){//interface_sign:9_not_in
 	char require_query_column[12] = {0};
 	int require_query_column_num = 0;
 	
+	int select_column_order[12] = {0};
+	int select_column_order_num = 0;
+	
 	if(file==NULL){
 		printf("<ERROR>:Query failed!\n");
 	}
@@ -1395,7 +1422,7 @@ void select_not_in(){//interface_sign:9_not_in
 		}
 		
 		for(k=0;k<cols_num;k++){
-			if(strcmp(field_word[k],command_word[5])==0){
+			if(strcmp(field_word[k],command_word[not_i-1])==0){
 				break;
 			}
 		}
@@ -1443,7 +1470,19 @@ void select_not_in(){//interface_sign:9_not_in
 			}
 		}
 		
-		int able_printf;
+		if(not_in_before_num>0){//multi AND/OR of NOT IN
+			for(i=0;i<not_in_before_num;i++){
+				if(i%2==0){
+					for(j=0;j<cols_num;j++){
+						if(strcmp(not_in_before[i],field_word[j])==0){
+							select_column_order[select_column_order_num++] = j;
+						}
+					}
+				}
+			}
+		}	
+		
+		int final_printf;
 		while(fgets(buffer,1024,file)!=NULL){
 			
 			i=0,j=0;
@@ -1457,16 +1496,42 @@ void select_not_in(){//interface_sign:9_not_in
 				table_value[i][j++] = buffer[k];
 			}
 			table_value[i][j++] = '\0';
-				
-			able_printf = 1;//able
+			
+			final_printf = 1;//able	
+			
 			for(k=0;k<not_in_num;k++){
 				if(strcmp(table_value[judge_column],not_in_value[k])==0){
-					able_printf = 0;
+					final_printf = 0;
 					break;
 				}
 			}
 				
-			if(able_printf==1){
+			if(not_in_before_num>0&&not_in_and_or==1&&final_printf==1){//multi AND of NOT IN	
+				k=1;
+				for(i=0;i<select_column_order_num;i++){
+					if(strcmp(table_value[select_column_order[i]],not_in_before[k])!=0){
+						final_printf = 0;
+						break;
+					}
+					else{
+						k = k + 2;
+					}
+				}
+			}
+			if(not_in_before_num>0&&not_in_and_or==0&&final_printf==0){//multi OR of NOT IN	
+				k=1;
+				for(i=0;i<select_column_order_num;i++){
+					if(strcmp(table_value[select_column_order[i]],not_in_before[k])==0){
+						final_printf = 1;
+						break;
+					}
+					else{
+						k = k + 2;
+					}
+				}
+			}
+			
+			if(final_printf==1){
 				if(strcmp(command_word[1],"*")==0){
 					return_num++;
 					printf("%s",buffer);
@@ -1489,21 +1554,27 @@ void select_not_in(){//interface_sign:9_not_in
 						}
 					}
 					printf("\n");	
-				}	
-			}		
-		}
-		
-		if(return_num>1){
-			printf("<INFO>:Query ok!%d rows returned.\n",return_num);
-		}
-		else{
-			printf("<INFO>:Query ok!%d row returned.\n",return_num);
-		}
-			
-		memset(not_in_value,'\0',sizeof(not_in_value));
-		not_in_num = 0;
-		fclose(file);
+				}
+			}	
+		}		
 	}
+		
+	if(return_num>1){
+		printf("<INFO>:Query ok!%d rows returned.\n",return_num);
+	}
+	else{
+		printf("<INFO>:Query ok!%d row returned.\n",return_num);
+	}
+		
+	is_not_in = 0;
+	not_i = 0;
+	memset(not_in_value,'\0',sizeof(not_in_value));
+	not_in_num = 0;
+	memset(not_in_before,'\0',sizeof(not_in_before));
+	not_in_before_num = 0;
+	not_in_and_or = 0;
+	
+	fclose(file);
 }
 
 void analyze_command_line(char *command_line,command_tree root){//command line analyze module
@@ -1564,7 +1635,7 @@ void analyze_command_line(char *command_line,command_tree root){//command line a
 				continue;
 			}
 			if(analyze_q->interface_sign==9&&strcmp(command_word[1],"*")==0){
-				if(strcmp(command_word[command_word_num-2],"IN")!=0){
+				if(is_not_in==0){
 					select_all_columns_by_column();
 				}
 				else{
@@ -1572,7 +1643,7 @@ void analyze_command_line(char *command_line,command_tree root){//command line a
 				}
 			}
 			if(analyze_q->interface_sign==9&&strcmp(command_word[1],"*")!=0){
-				if(strcmp(command_word[command_word_num-2],"IN")!=0){
+				if(is_not_in==0){
 					select_several_columns(command_word[5],command_word[7]);
 				}
 				else{
