@@ -84,6 +84,28 @@ SELECT * FROM user WHERE username = '杨千嬅' OR sex = '女' OR id NOT IN (1,2,12)
 
 SELECT id,username,password FROM user WHERE username = '杨千嬅' OR sex = '女' OR id NOT IN (1,2,12);
 
+SELECT id FROM user WHERE username = '杨千嬅' OR sex = '女' OR id NOT IN (1,2,12) GROUP BY id;
+
+SELECT id FROM user WHERE username = '杨千嬅' OR sex = '女' GROUP BY id;
+
+SELECT username FROM user WHERE id = 2 OR username = '杨千嬅' OR 注册日期 = '2016-09-01' GROUP BY username;
+
+SELECT 注册日期 FROM user WHERE id = 2 OR username = '杨千嬅' OR 注册日期 = '2016-09-01' GROUP BY 注册日期;
+
+SELECT 注册日期 FROM user WHERE id = 2 OR username = '杨千嬅' OR 注册日期 = '2016-09-01' GROUP BY 注册日期;
+
+SELECT id FROM user WHERE username = '黄复贵' AND id NOT IN (2) GROUP BY id;
+
+SELECT username FROM user WHERE username = '黄复贵' AND id NOT IN (2) GROUP BY username;
+
+SELECT username FROM user WHERE username = '黄复贵' OR username = '黄复光' GROUP BY username;
+
+SELECT username FROM user WHERE username = '黄复贵' OR username = '黄复光' GROUP BY username ORDER BY username;
+
+SELECT id FROM user WHERE username = '黄复贵' OR username = '黄复光' GROUP BY id;
+
+SELECT id FROM user WHERE username = '黄复贵' OR username = '黄复光' GROUP BY id ORDER BY id;
+
 
 UPDATE client SET username = '杨千嬅是我女人';
 

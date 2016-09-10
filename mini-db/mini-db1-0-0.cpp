@@ -22,6 +22,11 @@ char not_in_before[10][300];
 int not_in_before_num = 0;
 int not_in_and_or = 0;
 
+int group_by = 0;
+int group_by_i = 0;
+int order_by = 0;
+int order_by_i = 0;
+//char order_by_column[300] = "\0";
 
 double t1,t2;
 
@@ -54,6 +59,14 @@ void select_several_columns(char *col_name,char *value);//I:8_9
 void update(char *col_name,char *value);//I:10,11
 void select_not_in();//I:9_not_in
 void analyze_command_line(char *command_line,command_tree root);
+
+void swap(char a[], char b[]); 
+int partition(char a[][300], int low, int high);
+void quickSort(char a[][300], int low, int high);
+
+void swap_number(int *a, int *b);
+int partition_number(int a[], int low, int high);
+void quickSort_number(int a[], int low, int high);
 
 int main(){
 	
@@ -91,6 +104,7 @@ int main(){
 		}
 	}
 }
+
 
 /*Implements*/
 void tips(){//tips 
@@ -448,6 +462,14 @@ void separate_command_by_space(){//command_word[0,i]
 				is_not_in = 1;
 				not_i = i;
 			}
+			if(strcmp(command_word[i],"GROUP")==0){
+				group_by = 1;
+				group_by_i = i;
+			}
+			if(strcmp(command_word[i],"ORDER")==0){
+				order_by = 1;
+				order_by_i = i;
+			}
 			i++;
 			j=0;
 		}
@@ -476,6 +498,15 @@ void separate_command_by_space(){//command_word[0,i]
 		
 		if(is_not_in==1){
 			not_i = not_i - cut_command_word_num;
+		}
+		
+		if(group_by==1){
+			command_word_num = command_word_num - 3;
+		}
+		
+		if(order_by==1){
+			//strcpy(order_by_column,command_word[order_by_i+2]);
+			command_word_num = command_word_num - 3;
 		}
 	}
 	
@@ -1059,6 +1090,11 @@ void select_several_columns(char *col_name,char *value){//interface_sign:8_9
 	int value_i = 0;
 	int return_num = 0;
 	
+	char group_by_value[100][300];
+	int group_by_value_j = 0;
+	int group_by_value_i = 0;
+	
+	
 	if(file==NULL){
 		printf("<ERROR>:Query failed!\n");
 	} 
@@ -1197,8 +1233,10 @@ void select_several_columns(char *col_name,char *value){//interface_sign:8_9
 				
 				if(buffer[i]=='\n'){
 					if(select_column_order[0]!=-1&&able_printf==1||select_column_order[0]==-1){
-						printf("\n");
-						return_num++;
+						if(group_by ==0 ){
+							printf("\n");
+							return_num++;
+						}
 					}
 					break;
 				}
@@ -1206,15 +1244,77 @@ void select_several_columns(char *col_name,char *value){//interface_sign:8_9
 				for(j=0;j<require_query_column_num;j++){
 					if(field_separate_flag==require_query_column[j]){
 						if((select_column_order[0]!=-1&&able_printf==1)||select_column_order[0]==-1){
-							printf("%c",buffer[i]);
-							if(buffer[i+1]=='\t'){
-								printf("\t");
+							if(group_by==0){
+								printf("%c",buffer[i]);
+								if(buffer[i+1]=='\t'){
+									printf("\t");
+								}
+							}
+							else{						
+								group_by_value[group_by_value_i][group_by_value_j++] = buffer[i];								
+								if(buffer[i+1]=='\t'||buffer[i+1]=='\n'){									
+									group_by_value[group_by_value_i][group_by_value_j++] = '\0';
+									group_by_value_i++;
+									group_by_value_j = 0;
+								}
 							}
 						}	
 					}
 				}
-				
 			}		
+		}
+
+		if(group_by==1){
+			
+			char true_output[100][300];
+			int true_output_num = 1;
+			int flag = 0;
+			strcpy(true_output[0],group_by_value[0]);
+			for(i=1;i<group_by_value_i;i++){
+				for(j=0;j<true_output_num;j++){
+					if(strcmp(group_by_value[i],true_output[j])==0){
+						flag = 1;
+					}
+				}
+				if(flag==0){
+					strcpy(true_output[true_output_num++],group_by_value[i]);
+				}
+				else{
+					flag = 0;
+				}
+			}
+				
+			int chinese_flag = 1;
+			if(order_by ==1 ){			
+				for(i=0;true_output[0][i]!='\0';i++){
+					if(!(true_output[0][i]>='0'&&true_output[0][i]<='9')){
+						chinese_flag = 0;
+						break;
+					}
+				}
+				if(0==chinese_flag){
+					quickSort(true_output,0,true_output_num-1);
+				}
+				else{
+					int a[100] = {0};
+					for(i=0;i<true_output_num;i++){
+						a[i] = atoi(true_output[i]);
+					}
+					quickSort_number(a,0,true_output_num-1);
+					for(i=0;i<true_output_num;i++){
+						printf("%d\n",a[i]);
+					}
+					return_num = true_output_num;
+				}
+				
+			}
+			
+			if(!(order_by==1&&chinese_flag==1)){
+				for(i=0;i<true_output_num;i++){
+					printf("%s\n",true_output[i]);
+				}
+				return_num = true_output_num;
+			}
 		}
 		
 		if(return_num>1){
@@ -1226,6 +1326,16 @@ void select_several_columns(char *col_name,char *value){//interface_sign:8_9
 		
 		memset(multi_query,'\0',sizeof(multi_query));
 		multi_query_num = 0;
+		
+		if(group_by==1){
+			group_by = 0;
+			group_by_i = 0;
+		}
+		if(order_by==1){
+			order_by = 0;
+			order_by_i = 0;
+		}
+		
 		fclose(file);
 	} 
 }
@@ -1398,6 +1508,10 @@ void select_not_in(){//interface_sign:9_not_in
 	int select_column_order[12] = {0};
 	int select_column_order_num = 0;
 	
+	char group_by_value[100][300];
+	int group_by_value_j = 0;
+	int group_by_value_i = 0;
+	
 	if(file==NULL){
 		printf("<ERROR>:Query failed!\n");
 	}
@@ -1546,17 +1660,81 @@ void select_not_in(){//interface_sign:9_not_in
 						}
 						for(i = 0;i<require_query_column_num;i++){
 							if(field_separate_flag==require_query_column[i]){
-								printf("%c",buffer[k]);
-								if(buffer[k+1]=='\t'){
-									printf("\t");
+								if(group_by==0){
+									printf("%c",buffer[k]);
+									if(buffer[k+1]=='\t'){
+										printf("\t");
+									}
+								}
+								else{						
+									group_by_value[group_by_value_i][group_by_value_j++] = buffer[k];								
+									if(buffer[k+1]=='\t'||buffer[k+1]=='\n'){									
+										group_by_value[group_by_value_i][group_by_value_j++] = '\0';
+										group_by_value_i++;
+										group_by_value_j = 0;
+									}
 								}
 							}
 						}
 					}
-					printf("\n");	
+					if(group_by==0){
+						printf("\n");	
+					}
 				}
 			}	
 		}		
+	}
+	
+	if(group_by==1){
+		
+		char true_output[100][300];
+		int true_output_num = 1;
+		int flag = 0;
+		strcpy(true_output[0],group_by_value[0]);
+		for(i=1;i<group_by_value_i;i++){
+			for(j=0;j<true_output_num;j++){
+				if(strcmp(group_by_value[i],true_output[j])==0){
+					flag = 1;
+				}
+			}
+			if(flag==0){
+				strcpy(true_output[true_output_num++],group_by_value[i]);
+			}
+			else{
+				flag = 0;
+			}
+		}
+		
+		int chinese_flag = 1;
+		if(order_by ==1 ){			
+			for(i=0;true_output[0][i]!='\0';i++){
+				if(!(true_output[0][i]>='0'&&true_output[0][i]<='9')){
+					chinese_flag = 0;
+					break;
+				}
+			}
+			if(0==chinese_flag){
+				quickSort(true_output,0,true_output_num-1);
+			}
+			else{
+				int a[100] = {0};
+				for(i=0;i<true_output_num;i++){
+					a[i] = atoi(true_output[i]);
+				}
+				quickSort_number(a,0,true_output_num-1);
+				for(i=0;i<true_output_num;i++){
+					printf("%d\n",a[i]);
+				}
+				return_num = true_output_num;
+			}
+		}
+			
+		if(!(order_by==1&&chinese_flag==1)){
+			for(i=0;i<true_output_num;i++){
+				printf("%s\n",true_output[i]);
+			}
+			return_num = true_output_num;
+		}
 	}
 		
 	if(return_num>1){
@@ -1573,6 +1751,15 @@ void select_not_in(){//interface_sign:9_not_in
 	memset(not_in_before,'\0',sizeof(not_in_before));
 	not_in_before_num = 0;
 	not_in_and_or = 0;
+	
+	if(group_by==1){
+		group_by = 0;
+		group_by_i = 0;
+	}
+	if(order_by==1){
+		order_by = 0;
+		order_by_i = 0;
+	}
 	
 	fclose(file);
 }
@@ -1662,4 +1849,61 @@ void analyze_command_line(char *command_line,command_tree root){//command line a
 			break;
 		}
 	}
+}
+
+
+void swap(char a[], char b[])
+{
+    char tmp[300] = "\0";
+    strcpy(tmp ,a);
+    strcpy(a ,b);
+    strcpy(b,tmp);
+}
+
+int partition(char a[][300], int low, int high)
+{
+    char privotKey[300] = "\0";
+	strcpy(privotKey,a[low]);                         
+    while(low < high){                                  
+        while(low < high  && strcmp(a[high], privotKey)>=0) --high;  
+        swap(a[low], a[high]);
+        while(low < high  && strcmp(a[low],privotKey)<=0 ) ++low;
+        swap(a[low], a[high]);
+    }
+    return low;
+}
+
+void quickSort(char a[][300], int low, int high){
+    if(low < high){
+        int privotLoc = partition(a,  low,  high);  
+        quickSort(a,  low,  privotLoc -1);          
+        quickSort(a,   privotLoc + 1, high);
+    }
+}
+
+void swap_number(int *a, int *b)
+{
+    int tmp = *a;
+    *a = *b;
+    *b = tmp;
+}
+
+int partition_number(int a[], int low, int high)
+{
+    int privotKey = a[low];                            
+    while(low < high){                                   
+        while(low < high  && a[high] >= privotKey) --high; 
+        swap_number(&a[low], &a[high]);
+        while(low < high  && a[low] <= privotKey ) ++low;
+        swap_number(&a[low], &a[high]);
+    }
+    return low;
+}
+
+void quickSort_number(int a[], int low, int high){
+    if(low < high){
+        int privotLoc = partition_number(a,  low,  high);  //将表一分为二
+        quickSort_number(a,  low,  privotLoc -1);          //递归对低子表递归排序
+        quickSort_number(a,   privotLoc + 1, high);        //递归对高子表递归排序
+    }
 }
