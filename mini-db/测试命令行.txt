@@ -106,6 +106,10 @@ SELECT id FROM user WHERE username = '黄复贵' OR username = '黄复光' GROUP BY id
 
 SELECT id FROM user WHERE username = '黄复贵' OR username = '黄复光' GROUP BY id ORDER BY id;
 
+SELECT username FROM user WHERE username = '黄复贵' OR username = '黄复光' GROUP BY username ORDER BY username;
+
+SELECT 注册日期 FROM user WHERE username = '黄复贵' OR username = '黄复光' GROUP BY 注册日期 ORDER BY 注册日期;
+
 
 UPDATE client SET username = '杨千嬅是我女人';
 
@@ -118,3 +122,9 @@ UPDATE client SET username = '杨千嬅是我女人',password = '111',address = '香港，
 UPDATE client SET username = '杨千嬅是我女人',password = '111',address = '香港，维多利亚海港' WHERE username = '黄复贵';
 
 UPDATE client SET username = '杨千嬅是我女人',address = '香港，维多利亚海港' WHERE id = 2;
+
+
+CREATE INDEX ON user (id);
+
+SELECT * FROM user WHERE id = 102 USING INDEX;
+
