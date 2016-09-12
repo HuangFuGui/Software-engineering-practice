@@ -1963,6 +1963,7 @@ void create_index(){
 
 			bytes_sum += bytes_length(buffer);
 		}
+		printf("<INFO>:Create index successfully!\n");
 	}
 }
 
