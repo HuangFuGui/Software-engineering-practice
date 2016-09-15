@@ -2,7 +2,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include<time.h>
-//#include<dir.h>
+#include<dir.h>
 
 
 /*****  Global variable  *****/
@@ -751,7 +751,7 @@ void now_table(char *src){//table to use now
 
 void create_database(){//interface_sign:1
 
-	//mkdir(command_word[2]);
+	mkdir(command_word[2]);
 	now_database(command_word[2]);
 	printf("<INFO>:Create %s successfully!\n", database);
 }
