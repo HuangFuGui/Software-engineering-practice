@@ -43,13 +43,22 @@ typedef struct node{
 }node, *command_tree;
 command_tree q, node_array[1000];
 
-typedef struct index_node{
+typedef struct binary_tree_node{
 	int content;
 	int rows_num;
 	int bytes[10100];
-	struct index_node *lson, *rson;
-}index_node, *index_tree;
-index_tree index_q, index_head = NULL;
+	struct binary_tree_node *lson, *rson;
+}binary_tree_node, *binary_tree;
+binary_tree binary_tree_q, binary_tree_head = NULL;
+
+typedef struct trie_tree_node{
+	char content[10];
+	int rows_num;
+	int bytes[10100];
+	int sons_num;
+	struct trie_tree_node *son[10100];
+}trie_tree_node, *trie_tree;
+trie_tree trie_tree_q, trie_tree_head = NULL;
 
 
 /*****  Declare interfaces  *****/
@@ -72,10 +81,12 @@ void select_all_columns_by_column();//I:9
 void select_several_columns(char *col_name, char *value);//I:8_9
 void update(char *col_name, char *value);//I:10,11
 void select_not_in();//I:9_not_in
-index_tree insert(index_tree t, int num, int bytes_sum);
+binary_tree binary_tree_insert(binary_tree t, int num, int bytes_sum);
+trie_tree trie_tree_insert(trie_tree t, char *content, int bytes_sum, int flag);
 int bytes_length(char *src);
 void create_index();
-void traverse_index_tree_id(index_tree p);
+void traverse_index_binary_tree(binary_tree p);
+trie_tree traverse_index_trie_tree(trie_tree p, char *content, int flag);
 void select_all_columns_by_column_using_index();
 void analyze_command_line(char *command_line, command_tree root);
 void swap_char_array(char a[], char b[]);
@@ -1877,26 +1888,53 @@ void select_not_in(){//interface_sign:9_not_in
 	fclose(file);
 }
 
-index_tree insert(index_tree t, int num, int bytes_sum){
+binary_tree binary_tree_insert(binary_tree t, int num, int bytes_sum){
 
 	if (t == NULL){
-		t = (index_tree)malloc(sizeof(index_node));
+		t = (binary_tree)malloc(sizeof(binary_tree_node));
 		t->content = num;
 		t->rows_num = 0;
 		t->lson = t->rson = NULL;
 	}
 
 	if (num < t->content){
-		t->lson = insert(t->lson, num, bytes_sum);
+		t->lson = binary_tree_insert(t->lson, num, bytes_sum);
 	}
 	if (num > t->content){
-		t->rson = insert(t->rson, num, bytes_sum);
+		t->rson = binary_tree_insert(t->rson, num, bytes_sum);
 	}
 	if (num == t->content){//自己的本身就会有
 		t->bytes[t->rows_num++] = bytes_sum;
 	}
 
 	return t;
+}
+
+trie_tree trie_tree_insert(trie_tree t, char *content, int bytes_sum,int flag){
+
+	int i = 0;
+	for (i = 0; i < t->sons_num; i++){
+		if (strcmp(t->son[i]->content, content) == 0){
+			break;
+		}
+	}
+	if (i == t->sons_num){
+		trie_tree_q = (trie_tree)malloc(sizeof(trie_tree_node));
+		trie_tree_q->sons_num = 0;
+		trie_tree_q->rows_num = 0;
+		strcpy(trie_tree_q->content, content);
+		if (flag == 1){
+			trie_tree_q->bytes[trie_tree_q->rows_num++] = bytes_sum;
+		}
+		t->son[t->sons_num++] = trie_tree_q;
+		return trie_tree_q;
+	}
+	else{
+		if (flag == 1){
+			t->son[i]->bytes[t->son[i]->rows_num++] = bytes_sum;
+		}
+		return t->son[i];
+	}
 }
 
 int bytes_length(char *src){
@@ -1916,11 +1954,15 @@ void create_index(){
 
 	char buffer[1024] = "\0";
 	int i = 0, j = 0, k = 0;
+	int i_type = 0, j_type = 0;
 	char field_word[12][300];
+	char field_word_type[12][100];
+	int field_word_type_i = 0;
 	int field_separate_flag = 0;
 	int cols_num = 0;
 	char table_value[12][300];
 	int bytes_sum = 0;
+	char value_separate[256][5];
 
 	if (file != NULL){
 
@@ -1938,10 +1980,24 @@ void create_index(){
 				field_separate_flag++;
 				i++;
 				j = 0;
+				field_word_type[i_type][j_type++] = '\0';
+				i_type++;
+				j_type = 0;
 				continue;
 			}
 			if (field_separate_flag % 2 == 0){
 				field_word[i][j++] = buffer[k];
+			}
+			if (field_separate_flag % 2 != 0){
+				field_word_type[i_type][j_type++] = buffer[k];
+			}
+		}
+		field_word_type[i_type][j_type++] = '\0';
+
+		for (i = 0; i < cols_num; i++){
+			if (strcmp(field_word[i], command_word[4]) == 0){
+				field_word_type_i = i;
+				break;
 			}
 		}
 
@@ -1959,7 +2015,43 @@ void create_index(){
 			}
 			table_value[i][j++] = '\0';
 
-			index_head = insert(index_head, atoi(table_value[0]), bytes_sum);
+			if (strcmp(field_word_type[field_word_type_i], "INT") == 0){
+				binary_tree_head = binary_tree_insert(binary_tree_head, atoi(table_value[field_word_type_i]), bytes_sum);
+			}
+			else{
+
+				if (trie_tree_head == NULL){
+					trie_tree_q = (trie_tree)malloc(sizeof(trie_tree_node));
+					trie_tree_q->sons_num = 0;
+					trie_tree_q->rows_num = 0;
+					strcpy(trie_tree_q->content, "NULL");
+					trie_tree_head = trie_tree_q;
+				}
+
+				i = 0, j = 0;
+				for (k = 0; table_value[field_word_type_i][k] != '\0'; k++){
+					if (table_value[field_word_type_i][k] >= 0 && table_value[field_word_type_i][k] <= 127){
+						value_separate[i][j++] = table_value[field_word_type_i][k];
+						value_separate[i][j++] = '\0';
+						i++;
+						j = 0;
+					}
+					else{
+						value_separate[i][j++] = table_value[field_word_type_i][k];
+						value_separate[i][j++] = table_value[field_word_type_i][k + 1];
+						value_separate[i][j++] = '\0';
+						i++;
+						j = 0;
+						k++;
+					}
+				}
+
+				k = 0;
+				trie_tree help_node = trie_tree_head;
+				for (k = 0; k < i; k++){
+					help_node = trie_tree_insert(help_node, value_separate[k], bytes_sum,k==i-1);
+				}
+			}
 
 			bytes_sum += bytes_length(buffer);
 		}
@@ -1967,7 +2059,7 @@ void create_index(){
 	}
 }
 
-void traverse_index_tree_id(index_tree p){
+void traverse_index_binary_tree(binary_tree p){
 
 	now_table(command_word[3]);
 	char buffer[1024] = "\0";
@@ -1975,7 +2067,7 @@ void traverse_index_tree_id(index_tree p){
 	int k = 0, i = 0, j = 0, select_num = 0;
 
 	if (p->lson != NULL){
-		traverse_index_tree_id(p->lson);
+		traverse_index_binary_tree(p->lson);
 	}
 	if (p->content == atoi(command_word[7])){
 		for (int i = 0; i < p->rows_num; i++){
@@ -1993,8 +2085,29 @@ void traverse_index_tree_id(index_tree p){
 
 	}
 	if (p->rson != NULL){
-		traverse_index_tree_id(p->rson);
+		traverse_index_binary_tree(p->rson);
 	}
+}
+
+trie_tree traverse_index_trie_tree(trie_tree p,char *content,int flag){
+
+	int i = 0,j;
+	char buffer[1024] = "\0";
+	for (i = 0; i < p->sons_num; i++){
+		if (strcmp(p->son[i]->content, content) == 0){
+			if (flag == 1){//find it!
+				for (j = 0; j < p->son[i]->rows_num; j++){
+					fseek(file, p->son[i]->bytes[j], 0);
+					fgets(buffer, 1024, file);
+					printf("%s",buffer);
+				}
+			}
+			else{
+				return p->son[i];
+			}
+		}
+	}
+	return NULL;
 }
 
 void select_all_columns_by_column_using_index(){
@@ -2006,6 +2119,10 @@ void select_all_columns_by_column_using_index(){
 	char field_word[12][50];
 	int k = 0, i = 0, j = 0, field_separate_flag = 0;
 	int cols_num = 0;
+	char field_word_type[12][100];
+	int field_word_type_i = 0;
+	int i_type = 0, j_type = 0;
+	char value_separate[256][12];
 
 	if (file == NULL){
 		printf("<ERROR>:Query failed!\n");
@@ -2023,10 +2140,24 @@ void select_all_columns_by_column_using_index(){
 				field_separate_flag++;
 				i++;
 				j = 0;
+				field_word_type[i_type][j_type++] = '\0';
+				i_type++;
+				j_type = 0;
 				continue;
 			}
 			if (field_separate_flag % 2 == 0){
 				field_word[i][j++] = buffer[k];
+			}
+			if (field_separate_flag % 2 != 0){
+				field_word_type[i_type][j_type++] = buffer[k];
+			}
+		}
+		field_word_type[i_type][j_type++] = '\0';
+
+		for (k = 0; k < cols_num; k++){
+			if (strcmp(field_word[k], command_word[5]) == 0){
+				field_word_type_i = k;
+				break;
 			}
 		}
 
@@ -2040,7 +2171,37 @@ void select_all_columns_by_column_using_index(){
 			}
 		}
 
-		traverse_index_tree_id(index_head);
+		if (strcmp(field_word_type[field_word_type_i], "INT") == 0){
+			traverse_index_binary_tree(binary_tree_head);
+		}
+		else{
+
+			i = 0, j = 0;
+			for (k = 0; command_word[7][k] != '\0'; k++){
+				if (command_word[7][k] >= 0 && command_word[7][k] <= 127){
+					value_separate[i][j++] = command_word[7][k];
+					value_separate[i][j++] = '\0';
+					i++;
+					j = 0;
+				}
+				else{
+					value_separate[i][j++] = command_word[7][k];
+					value_separate[i][j++] = command_word[7][k + 1];
+					value_separate[i][j++] = '\0';
+					i++;
+					j = 0;
+					k++;
+				}
+			}
+
+			trie_tree help_node = trie_tree_head;
+			for (k = 0; k < i; k++){
+				help_node = traverse_index_trie_tree(help_node,value_separate[k],k==i-1);
+				if (help_node == NULL){
+					break;
+				}
+			}	
+		}
 
 		using_index = 0;
 		fclose(file);
@@ -2135,12 +2296,7 @@ void analyze_command_line(char *command_line, command_tree root){//command line 
 				update(command_word[command_word_num - 3], command_word[command_word_num - 1]);
 			}
 			if (analyze_q->interface_sign == 12){
-				if (strcmp(command_word[4], "id") == 0){
-					create_index();
-				}
-				else{
-					printf("Can only create index of id now!\n");
-				}
+				create_index();
 			}
 			break;
 		}
