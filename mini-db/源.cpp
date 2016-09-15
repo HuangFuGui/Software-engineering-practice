@@ -28,6 +28,7 @@ int group_by = 0;
 int group_by_i = 0;
 int order_by = 0;
 int order_by_i = 0;
+int desc = 0;
 
 double t1, t2;
 
@@ -583,7 +584,11 @@ void separate_command_by_space(){//command_word[0,i]
 			j = 0;
 		}
 	}
+	command_word[i][j++] = '\0';
 	command_word_num = i + 1;
+	if (strcmp(command_word[command_word_num-1], "DESC") == 0){
+		desc = 1;
+	}
 
 	if (strcmp(command_word[0], "SELECT") == 0 && strcmp(command_word[1], "*") != 0){//Select several columns...
 		j = 0;
@@ -615,7 +620,12 @@ void separate_command_by_space(){//command_word[0,i]
 		}
 
 		if (order_by == 1){
-			command_word_num = command_word_num - 3;
+			if (desc == 0){
+				command_word_num = command_word_num - 3;
+			}
+			else{
+				command_word_num = command_word_num - 4;
+			}
 		}
 	}
 
@@ -1423,8 +1433,15 @@ void select_several_columns(char *col_name, char *value){//interface_sign:8_9
 						a[i] = atoi(true_output[i]);
 					}
 					quick_sort_number(a, 0, true_output_num - 1);
-					for (i = 0; i<true_output_num; i++){
-						printf("%d\n", a[i]);
+					if (desc == 0){
+						for (i = 0; i<true_output_num; i++){
+							printf("%d\n", a[i]);
+						}
+					}
+					else{
+						for (i = true_output_num-1; i>=0; i--){
+							printf("%d\n", a[i]);
+						}
 					}
 					return_num = true_output_num;
 				}
@@ -1432,8 +1449,15 @@ void select_several_columns(char *col_name, char *value){//interface_sign:8_9
 			}
 
 			if (!(order_by == 1 && chinese_flag == 1)){
-				for (i = 0; i<true_output_num; i++){
-					printf("%s\n", true_output[i]);
+				if (desc == 0){
+					for (i = 0; i<true_output_num; i++){
+						printf("%s\n", true_output[i]);
+					}
+				}
+				else{
+					for (i = true_output_num-1; i>=0; i--){
+						printf("%s\n", true_output[i]);
+					}
 				}
 				return_num = true_output_num;
 			}
@@ -1457,6 +1481,7 @@ void select_several_columns(char *col_name, char *value){//interface_sign:8_9
 			order_by = 0;
 			order_by_i = 0;
 		}
+		desc = 0;
 
 		fclose(file);
 	}
@@ -1846,16 +1871,30 @@ void select_not_in(){//interface_sign:9_not_in
 					a[i] = atoi(true_output[i]);
 				}
 				quick_sort_number(a, 0, true_output_num - 1);
-				for (i = 0; i<true_output_num; i++){
-					printf("%d\n", a[i]);
+				if (desc == 0){
+					for (i = 0; i<true_output_num; i++){
+						printf("%d\n", a[i]);
+					}
+				}
+				else{
+					for (i = true_output_num-1; i>=0; i--){
+						printf("%d\n", a[i]);
+					}
 				}
 				return_num = true_output_num;
 			}
 		}
 
 		if (!(order_by == 1 && chinese_flag == 1)){
-			for (i = 0; i<true_output_num; i++){
-				printf("%s\n", true_output[i]);
+			if (desc == 0){
+				for (i = 0; i<true_output_num; i++){
+					printf("%s\n", true_output[i]);
+				}
+			}
+			else{
+				for (i = true_output_num-1; i>=0; i--){
+					printf("%s\n", true_output[i]);
+				}
 			}
 			return_num = true_output_num;
 		}
@@ -1884,6 +1923,7 @@ void select_not_in(){//interface_sign:9_not_in
 		order_by = 0;
 		order_by_i = 0;
 	}
+	desc = 0;
 
 	fclose(file);
 }
@@ -2101,10 +2141,14 @@ trie_tree traverse_index_trie_tree(trie_tree p,char *content,int flag){
 					fgets(buffer, 1024, file);
 					printf("%s",buffer);
 				}
+				if (p->son[i]->rows_num>1){
+					printf("<INFO>:Query ok!%d rows returned.\n", p->son[i]->rows_num);
+				}
+				else{
+					printf("<INFO>:Query ok!%d row returned.\n", p->son[i]->rows_num);
+				}
 			}
-			else{
-				return p->son[i];
-			}
+			return p->son[i];
 		}
 	}
 	return NULL;
@@ -2198,6 +2242,7 @@ void select_all_columns_by_column_using_index(){
 			for (k = 0; k < i; k++){
 				help_node = traverse_index_trie_tree(help_node,value_separate[k],k==i-1);
 				if (help_node == NULL){
+					printf("<INFO>:Query ok!0 row returned.\n");
 					break;
 				}
 			}	
@@ -2226,7 +2271,7 @@ void analyze_command_line(char *command_line, command_tree root){//command line 
 			continue;
 		}
 		else if (analyze_q == NULL){
-			printf("Error SQL!\n");
+			printf("<ERROR>:Error SQL!Something error near:%s\n", command_word[i]);
 			break;
 		}
 		if (analyze_q->interface_sign>0){
