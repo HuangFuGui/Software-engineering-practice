@@ -2,7 +2,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include<time.h>
-#include<dir.h>
+//#include<dir.h>
 
 
 /*****  Global variable  *****/
@@ -33,6 +33,15 @@ int desc = 0;
 double t1, t2;
 
 int using_index = 0;
+
+char command_value_separate[256][5];
+double command_value_separate_length = 0;
+typedef struct wildcard_node{
+	double result;
+	char buffer[1024];
+}wildcard_node;
+wildcard_node wildcard_output[10010];
+int wildcard_output_length = 0;
 
 
 /*****  Define structure  *****/
@@ -89,6 +98,8 @@ void create_index();
 void traverse_index_binary_tree(binary_tree p);
 trie_tree traverse_index_trie_tree(trie_tree p, char *content, int flag);
 void select_all_columns_by_column_using_index();
+void select_all_columns_wildcard();
+double longest_common_sub_sequence(char src[][5], int src_length);
 void analyze_command_line(char *command_line, command_tree root);
 void swap_char_array(char a[], char b[]);
 int partition_char_array(char a[][300], int low, int high);
@@ -521,6 +532,21 @@ void build_command_tree(){
 	node_array[i++] = q;//47
 	node_array[46]->son[0] = q;
 	node_array[46]->son_num++;
+
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content, "LIKE");
+	q->son_num = 0;
+	node_array[i++] = q;//48
+	node_array[29]->son[2] = q;
+	node_array[29]->son_num++;
+
+	q = (command_tree)malloc(sizeof(node));
+	strcpy(q->content, "{wildcard}");
+	q->son_num = 0;
+	q->interface_sign = 13;
+	node_array[i++] = q;//49
+	node_array[48]->son[0] = q;
+	node_array[48]->son_num++;
 }
 
 command_tree traverse_command_tree(command_tree father, char *cur_command_word){
@@ -751,7 +777,7 @@ void now_table(char *src){//table to use now
 
 void create_database(){//interface_sign:1
 
-	mkdir(command_word[2]);
+	//mkdir(command_word[2]);
 	now_database(command_word[2]);
 	printf("<INFO>:Create %s successfully!\n", database);
 }
@@ -2253,6 +2279,227 @@ void select_all_columns_by_column_using_index(){
 	}
 }
 
+void select_all_columns_wildcard(){
+	
+	now_table(command_word[3]);
+
+	int i = 0,j = 0,k = 0,m = 0;
+	char buffer[1024] = "\0";
+	int field_separate_flag = 0, cols_num = 0;
+	char field_word[12][300];
+	
+	int wildcard_column = 0;
+
+	char table_value[12][300];
+	char value_separate[256][5];
+
+	int need_select[12] = { 0 };
+	int need_select_length = 0;
+	char need_select_columns[12][100];
+	char output_value[12][300];
+
+	file = fopen(table, "a+");
+
+	if (file != NULL){
+		fgets(buffer, 1024, file);
+		for (k = 0; buffer[k] != '\n'; k++){//get columns from database  -->  field_word[0,i]
+			if (buffer[k] == ' '){
+				field_word[i][j++] = '\0';
+				field_separate_flag++;
+				cols_num++;
+				continue;
+			}
+			if (buffer[k] == '\t'){
+				field_separate_flag++;
+				i++;
+				j = 0;
+				continue;
+			}
+			if (field_separate_flag % 2 == 0){
+				field_word[i][j++] = buffer[k];
+			}
+		}
+
+		if (strcmp(command_word[1], "*") == 0){
+			for (k = 0; k<cols_num; k++){
+				printf("%s", field_word[k]);
+				if (k<cols_num - 1){
+					printf("\t");
+				}
+				else{
+					printf("\n");
+				}
+			}
+		}
+		else{
+			printf("%s\n", command_word[1]);
+
+			i = 0, j = 0;
+			for (k = 0; command_word[1][k] != '\0'; k++){
+				if (command_word[1][k] == '\t'){
+					need_select_columns[i][j++] = '\0';
+					i++;
+					j = 0;
+					continue;
+				}
+				need_select_columns[i][j++] = command_word[1][k];
+			}
+			need_select_columns[i][j++] = '\0';
+
+			for (k = 0; k <= i; k++){
+				for (j = 0; j < cols_num; j++){
+					if (strcmp(need_select_columns[k], field_word[j]) == 0){
+						need_select[need_select_length++] = j;//note the columns_number need to show
+						break;
+					}
+				}
+			}
+
+		}
+
+		for (k = 0; k < cols_num; k++){//note the column need to wildcard
+			if (strcmp(field_word[k], command_word[5]) == 0){
+				wildcard_column = k;
+			}
+		}
+
+		i = 0, j = 0;//separate the wildcard value from command_line
+		for (k = 0; command_word[7][k] != '\0'; k++){
+			if (command_word[7][k] == '%'){
+				continue;
+			}
+			if (command_word[7][k] >= 0 && command_word[7][k] <= 127){
+				command_value_separate[i][j++] = command_word[7][k];
+				command_value_separate[i][j++] = '\0';
+				i++;
+				j = 0;
+			}
+			else{
+				command_value_separate[i][j++] = command_word[7][k];
+				command_value_separate[i][j++] = command_word[7][k + 1];
+				command_value_separate[i][j++] = '\0';
+				i++;
+				j = 0;
+				k++;
+			}
+		}
+		command_value_separate_length = i;
+
+		while (fgets(buffer, 1024, file) != NULL){
+			i = 0, j = 0;
+			for (k = 0; buffer[k] != '\n'; k++){
+				if (buffer[k] == '\t'){
+					table_value[i][j++] = '\0';
+					i++;
+					j = 0;
+					continue;
+				}
+				table_value[i][j++] = buffer[k];
+			}
+			table_value[i][j++] = '\0';
+
+			i = 0, j = 0;
+			for (k = 0; table_value[wildcard_column][k] != '\0'; k++){
+				if (table_value[wildcard_column][k] >= 0 && table_value[wildcard_column][k] <= 127){
+					value_separate[i][j++] = table_value[wildcard_column][k];
+					value_separate[i][j++] = '\0';
+					i++;
+					j = 0;
+				}
+				else{
+					value_separate[i][j++] = table_value[wildcard_column][k];
+					value_separate[i][j++] = table_value[wildcard_column][k + 1];
+					value_separate[i][j++] = '\0';
+					i++;
+					j = 0;
+					k++;
+				}
+			}
+			
+			double result = longest_common_sub_sequence(value_separate,i);	
+			if (result >= 0.4){
+				wildcard_output[wildcard_output_length].result = result;
+				strcpy(wildcard_output[wildcard_output_length].buffer, buffer);
+				wildcard_output_length++;
+			}
+		}
+		
+		double temp_result;
+		char temp_buffer[1024] = "\0";
+		for (i = 0; i < wildcard_output_length; i++){//bubble sort,from the highest similarity to the lowest similarity(>0.4)
+			for (j = i+1; j < wildcard_output_length; j++){
+				if (wildcard_output[i].result < wildcard_output[j].result){
+
+					temp_result = wildcard_output[i].result;
+					wildcard_output[i].result = wildcard_output[j].result;
+					wildcard_output[j].result = temp_result;
+
+					strcpy(temp_buffer, wildcard_output[i].buffer);
+					strcpy(wildcard_output[i].buffer, wildcard_output[j].buffer);
+					strcpy(wildcard_output[j].buffer,temp_buffer);
+				}
+			}
+		}
+
+		if (strcmp(command_word[1], "*") == 0){
+			for (i = 0; i < wildcard_output_length; i++){
+				printf("%s",wildcard_output[i].buffer);
+			}
+		}
+		else{
+			for (m = 0; m < wildcard_output_length; m++){	
+				i = 0, j = 0;
+				for (k = 0; wildcard_output[m].buffer[k]!= '\n'; k++){
+					if (wildcard_output[m].buffer[k] == '\t'){
+						output_value[i][j++] = '\0';
+						i++;
+						j = 0;
+						continue;
+					}
+					output_value[i][j++] = wildcard_output[m].buffer[k];
+				}
+				output_value[i][j++] = '\0';
+
+				for (k = 0; k < need_select_length; k++){
+					printf("%s", output_value[need_select[k]]);
+					if (k == need_select_length - 1){
+						printf("\n");
+					}
+					else{
+						printf("\t");
+					}
+				}
+			}
+		}
+
+		command_value_separate_length = 0;
+		memset(command_value_separate, '\0', sizeof(command_value_separate));
+		wildcard_output_length = 0;
+		fclose(file);
+	}
+}
+
+double longest_common_sub_sequence(char src[][5],int src_length){
+
+	double sub_sequence_length[2][256];
+	memset(sub_sequence_length, 0, sizeof(sub_sequence_length));
+	int i = 0,j = 0,help = 0;
+
+	for (i = 1; i <= command_value_separate_length; i++){
+		for (j = 1; j <= src_length; j++){
+			help = i % 2;
+			if (strcmp(command_value_separate[i - 1], src[j - 1])==0){
+				sub_sequence_length[help][j] = 1 + sub_sequence_length[(help + 1) % 2][j - 1];
+			}
+			else{
+				sub_sequence_length[help][j] = sub_sequence_length[(help + 1) % 2][j] > sub_sequence_length[help][j - 1] ? sub_sequence_length[(help + 1) % 2][j] : sub_sequence_length[help][j - 1];
+			}
+		}
+	}
+
+	return sub_sequence_length[help][src_length] / command_value_separate_length;
+}
+
 void analyze_command_line(char *command_line, command_tree root){//command line analyze module
 
 	if (strcmp(command_line, "SHOW TIPS") == 0){
@@ -2342,6 +2589,9 @@ void analyze_command_line(char *command_line, command_tree root){//command line 
 			}
 			if (analyze_q->interface_sign == 12){
 				create_index();
+			}
+			if (analyze_q->interface_sign == 13){
+				select_all_columns_wildcard();
 			}
 			break;
 		}

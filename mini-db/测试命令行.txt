@@ -128,3 +128,6 @@ CREATE INDEX ON user (id);
 
 SELECT * FROM user WHERE id = 102 USING INDEX;
 
+SELECT * FROM test WHERE field LIKE '%高并发优化%';
+
+SELECT id,field FROM test WHERE field LIKE '%高并发优化%';
