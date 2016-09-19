@@ -2,7 +2,7 @@
 #include<stdlib.h>
 #include<string.h>
 #include<time.h>
-//#include<dir.h>
+#include<dir.h>
 
 
 /*****  Global variable  *****/
@@ -91,16 +91,6 @@ void select_all_columns_by_column();//I:9
 void select_several_columns(char *col_name, char *value);//I:8_9
 void update(char *col_name, char *value);//I:10,11
 void select_not_in();//I:9_not_in
-binary_tree binary_tree_insert(binary_tree t, int num, int bytes_sum);
-trie_tree trie_tree_insert(trie_tree t, char *content, int bytes_sum, int flag);
-int bytes_length(char *src);
-void create_index();
-void traverse_index_binary_tree(binary_tree p);
-trie_tree traverse_index_trie_tree(trie_tree p, char *content, int flag);
-void select_all_columns_by_column_using_index();
-void select_all_columns_wildcard();
-double longest_common_sub_sequence(char src[][5], int src_length);
-void analyze_command_line(char *command_line, command_tree root);
 void swap_char_array(char a[], char b[]);
 int partition_char_array(char a[][300], int low, int high);
 void quick_sort_char_array(char a[][300], int low, int high);
@@ -108,8 +98,21 @@ void swap_number(int *a, int *b);
 int partition_number(int a[], int low, int high);
 void quick_sort_number(int a[], int low, int high);
 
+binary_tree binary_tree_insert(binary_tree t, int num, int bytes_sum);
+trie_tree trie_tree_insert(trie_tree t, char *content, int bytes_sum, int flag);
+int bytes_length(char *src);
+void create_index();//I:12
+void traverse_index_binary_tree(binary_tree p);
+trie_tree traverse_index_trie_tree(trie_tree p, char *content, int flag);
+void select_all_columns_by_column_using_index();
 
-/*****  Main function  *****/ 
+void select_with_wildcard();//I:13
+double longest_common_sub_sequence(char src[][5], int src_length);
+
+void analyze_command_line(char *command_line, command_tree root);
+
+
+/*****  Main function  *****/
 int main(){
 
 	printf("\n\t\t\tWelcome to mini-db!\n\n");
@@ -612,7 +615,7 @@ void separate_command_by_space(){//command_word[0,i]
 	}
 	command_word[i][j++] = '\0';
 	command_word_num = i + 1;
-	if (strcmp(command_word[command_word_num-1], "DESC") == 0){
+	if (strcmp(command_word[command_word_num - 1], "DESC") == 0){
 		desc = 1;
 	}
 
@@ -702,7 +705,7 @@ void separate_command_by_space(){//command_word[0,i]
 	}
 
 	if ((strcmp(command_word[0], "SELECT") == 0 && strcmp(command_word[command_word_num - 4], "AND") == 0) || (strcmp(command_word[0], "SELECT") == 0 && strcmp(command_word[command_word_num - 4], "OR") == 0)){
-		
+
 		if (strcmp(command_word[command_word_num - 4], "AND") == 0){
 			and_or = 1;//AND
 		}
@@ -739,7 +742,7 @@ void separate_command_by_space(){//command_word[0,i]
 	}
 
 	/*for(i=0;i<command_word_num;i++){
-		printf("command_word: %s\n",command_word[i]);
+	printf("command_word: %s\n",command_word[i]);
 	}*/
 }
 
@@ -777,7 +780,7 @@ void now_table(char *src){//table to use now
 
 void create_database(){//interface_sign:1
 
-	//mkdir(command_word[2]);
+	mkdir(command_word[2]);
 	now_database(command_word[2]);
 	printf("<INFO>:Create %s successfully!\n", database);
 }
@@ -1465,7 +1468,7 @@ void select_several_columns(char *col_name, char *value){//interface_sign:8_9
 						}
 					}
 					else{
-						for (i = true_output_num-1; i>=0; i--){
+						for (i = true_output_num - 1; i >= 0; i--){
 							printf("%d\n", a[i]);
 						}
 					}
@@ -1481,7 +1484,7 @@ void select_several_columns(char *col_name, char *value){//interface_sign:8_9
 					}
 				}
 				else{
-					for (i = true_output_num-1; i>=0; i--){
+					for (i = true_output_num - 1; i >= 0; i--){
 						printf("%s\n", true_output[i]);
 					}
 				}
@@ -1903,7 +1906,7 @@ void select_not_in(){//interface_sign:9_not_in
 					}
 				}
 				else{
-					for (i = true_output_num-1; i>=0; i--){
+					for (i = true_output_num - 1; i >= 0; i--){
 						printf("%d\n", a[i]);
 					}
 				}
@@ -1918,7 +1921,7 @@ void select_not_in(){//interface_sign:9_not_in
 				}
 			}
 			else{
-				for (i = true_output_num-1; i>=0; i--){
+				for (i = true_output_num - 1; i >= 0; i--){
 					printf("%s\n", true_output[i]);
 				}
 			}
@@ -1954,6 +1957,64 @@ void select_not_in(){//interface_sign:9_not_in
 	fclose(file);
 }
 
+void swap_char_array(char a[], char b[]){
+
+	char tmp[300] = "\0";
+	strcpy(tmp, a);
+	strcpy(a, b);
+	strcpy(b, tmp);
+}
+
+int partition_char_array(char a[][300], int low, int high){
+
+	char privotKey[300] = "\0";
+	strcpy(privotKey, a[low]);
+	while (low < high){
+		while (low < high  && strcmp(a[high], privotKey) >= 0) --high;
+		swap_char_array(a[low], a[high]);
+		while (low < high  && strcmp(a[low], privotKey) <= 0) ++low;
+		swap_char_array(a[low], a[high]);
+	}
+	return low;
+}
+
+void quick_sort_char_array(char a[][300], int low, int high){
+
+	if (low < high){
+		int privotLoc = partition_char_array(a, low, high);
+		quick_sort_char_array(a, low, privotLoc - 1);
+		quick_sort_char_array(a, privotLoc + 1, high);
+	}
+}
+
+void swap_number(int *a, int *b){
+
+	int tmp = *a;
+	*a = *b;
+	*b = tmp;
+}
+
+int partition_number(int a[], int low, int high){
+
+	int privotKey = a[low];
+	while (low < high){
+		while (low < high  && a[high] >= privotKey) --high;
+		swap_number(&a[low], &a[high]);
+		while (low < high  && a[low] <= privotKey) ++low;
+		swap_number(&a[low], &a[high]);
+	}
+	return low;
+}
+
+void quick_sort_number(int a[], int low, int high){
+
+	if (low < high){
+		int privotLoc = partition_number(a, low, high);
+		quick_sort_number(a, low, privotLoc - 1);
+		quick_sort_number(a, privotLoc + 1, high);
+	}
+}
+
 binary_tree binary_tree_insert(binary_tree t, int num, int bytes_sum){
 
 	if (t == NULL){
@@ -1969,14 +2030,14 @@ binary_tree binary_tree_insert(binary_tree t, int num, int bytes_sum){
 	if (num > t->content){
 		t->rson = binary_tree_insert(t->rson, num, bytes_sum);
 	}
-	if (num == t->content){//自己的本身就会有
+	if (num == t->content){//itself
 		t->bytes[t->rows_num++] = bytes_sum;
 	}
 
 	return t;
 }
 
-trie_tree trie_tree_insert(trie_tree t, char *content, int bytes_sum,int flag){
+trie_tree trie_tree_insert(trie_tree t, char *content, int bytes_sum, int flag){
 
 	int i = 0;
 	for (i = 0; i < t->sons_num; i++){
@@ -1984,7 +2045,7 @@ trie_tree trie_tree_insert(trie_tree t, char *content, int bytes_sum,int flag){
 			break;
 		}
 	}
-	if (i == t->sons_num){
+	if (i == t->sons_num){//not found
 		trie_tree_q = (trie_tree)malloc(sizeof(trie_tree_node));
 		trie_tree_q->sons_num = 0;
 		trie_tree_q->rows_num = 0;
@@ -1995,7 +2056,7 @@ trie_tree trie_tree_insert(trie_tree t, char *content, int bytes_sum,int flag){
 		t->son[t->sons_num++] = trie_tree_q;
 		return trie_tree_q;
 	}
-	else{
+	else{//found
 		if (flag == 1){
 			t->son[i]->bytes[t->son[i]->rows_num++] = bytes_sum;
 		}
@@ -2013,7 +2074,7 @@ int bytes_length(char *src){
 	return sum + 2;
 }
 
-void create_index(){
+void create_index(){//interface_sign:12
 
 	now_table(command_word[3]);
 	FILE *file = fopen(table, "a+");
@@ -2115,7 +2176,7 @@ void create_index(){
 				k = 0;
 				trie_tree help_node = trie_tree_head;
 				for (k = 0; k < i; k++){
-					help_node = trie_tree_insert(help_node, value_separate[k], bytes_sum,k==i-1);
+					help_node = trie_tree_insert(help_node, value_separate[k], bytes_sum, k == i - 1);
 				}
 			}
 
@@ -2155,9 +2216,9 @@ void traverse_index_binary_tree(binary_tree p){
 	}
 }
 
-trie_tree traverse_index_trie_tree(trie_tree p,char *content,int flag){
+trie_tree traverse_index_trie_tree(trie_tree p, char *content, int flag){
 
-	int i = 0,j;
+	int i = 0, j;
 	char buffer[1024] = "\0";
 	for (i = 0; i < p->sons_num; i++){
 		if (strcmp(p->son[i]->content, content) == 0){
@@ -2165,7 +2226,7 @@ trie_tree traverse_index_trie_tree(trie_tree p,char *content,int flag){
 				for (j = 0; j < p->son[i]->rows_num; j++){
 					fseek(file, p->son[i]->bytes[j], 0);
 					fgets(buffer, 1024, file);
-					printf("%s",buffer);
+					printf("%s", buffer);
 				}
 				if (p->son[i]->rows_num>1){
 					printf("<INFO>:Query ok!%d rows returned.\n", p->son[i]->rows_num);
@@ -2266,12 +2327,12 @@ void select_all_columns_by_column_using_index(){
 
 			trie_tree help_node = trie_tree_head;
 			for (k = 0; k < i; k++){
-				help_node = traverse_index_trie_tree(help_node,value_separate[k],k==i-1);
+				help_node = traverse_index_trie_tree(help_node, value_separate[k], k == i - 1);
 				if (help_node == NULL){
 					printf("<INFO>:Query ok!0 row returned.\n");
 					break;
 				}
-			}	
+			}
 		}
 
 		using_index = 0;
@@ -2279,15 +2340,15 @@ void select_all_columns_by_column_using_index(){
 	}
 }
 
-void select_all_columns_wildcard(){
-	
+void select_with_wildcard(){//interface_sign:13
+
 	now_table(command_word[3]);
 
-	int i = 0,j = 0,k = 0,m = 0;
+	int i = 0, j = 0, k = 0, m = 0;
 	char buffer[1024] = "\0";
 	int field_separate_flag = 0, cols_num = 0;
 	char field_word[12][300];
-	
+
 	int wildcard_column = 0;
 
 	char table_value[12][300];
@@ -2415,19 +2476,19 @@ void select_all_columns_wildcard(){
 					k++;
 				}
 			}
-			
-			double result = longest_common_sub_sequence(value_separate,i);	
+
+			double result = longest_common_sub_sequence(value_separate, i);
 			if (result >= 0.4){
 				wildcard_output[wildcard_output_length].result = result;
 				strcpy(wildcard_output[wildcard_output_length].buffer, buffer);
 				wildcard_output_length++;
 			}
 		}
-		
+
 		double temp_result;
 		char temp_buffer[1024] = "\0";
 		for (i = 0; i < wildcard_output_length; i++){//bubble sort,from the highest similarity to the lowest similarity(>0.4)
-			for (j = i+1; j < wildcard_output_length; j++){
+			for (j = i + 1; j < wildcard_output_length; j++){
 				if (wildcard_output[i].result < wildcard_output[j].result){
 
 					temp_result = wildcard_output[i].result;
@@ -2436,20 +2497,20 @@ void select_all_columns_wildcard(){
 
 					strcpy(temp_buffer, wildcard_output[i].buffer);
 					strcpy(wildcard_output[i].buffer, wildcard_output[j].buffer);
-					strcpy(wildcard_output[j].buffer,temp_buffer);
+					strcpy(wildcard_output[j].buffer, temp_buffer);
 				}
 			}
 		}
 
 		if (strcmp(command_word[1], "*") == 0){
 			for (i = 0; i < wildcard_output_length; i++){
-				printf("%s",wildcard_output[i].buffer);
+				printf("%s", wildcard_output[i].buffer);
 			}
 		}
-		else{
-			for (m = 0; m < wildcard_output_length; m++){	
+		else{//show contents accroading to the SELECT 
+			for (m = 0; m < wildcard_output_length; m++){
 				i = 0, j = 0;
-				for (k = 0; wildcard_output[m].buffer[k]!= '\n'; k++){
+				for (k = 0; wildcard_output[m].buffer[k] != '\n'; k++){
 					if (wildcard_output[m].buffer[k] == '\t'){
 						output_value[i][j++] = '\0';
 						i++;
@@ -2472,6 +2533,13 @@ void select_all_columns_wildcard(){
 			}
 		}
 
+		if (wildcard_output_length > 1){
+			printf("<INFO>:Query ok!%d rows returned.\n", wildcard_output_length);
+		}
+		else{
+			printf("<INFO>:Query ok!%d row returned.\n", wildcard_output_length);
+		}
+
 		command_value_separate_length = 0;
 		memset(command_value_separate, '\0', sizeof(command_value_separate));
 		wildcard_output_length = 0;
@@ -2479,16 +2547,16 @@ void select_all_columns_wildcard(){
 	}
 }
 
-double longest_common_sub_sequence(char src[][5],int src_length){
+double longest_common_sub_sequence(char src[][5], int src_length){
 
 	double sub_sequence_length[2][256];
 	memset(sub_sequence_length, 0, sizeof(sub_sequence_length));
-	int i = 0,j = 0,help = 0;
+	int i = 0, j = 0, help = 0;
 
 	for (i = 1; i <= command_value_separate_length; i++){
 		for (j = 1; j <= src_length; j++){
 			help = i % 2;
-			if (strcmp(command_value_separate[i - 1], src[j - 1])==0){
+			if (strcmp(command_value_separate[i - 1], src[j - 1]) == 0){
 				sub_sequence_length[help][j] = 1 + sub_sequence_length[(help + 1) % 2][j - 1];
 			}
 			else{
@@ -2591,67 +2659,9 @@ void analyze_command_line(char *command_line, command_tree root){//command line 
 				create_index();
 			}
 			if (analyze_q->interface_sign == 13){
-				select_all_columns_wildcard();
+				select_with_wildcard();
 			}
 			break;
 		}
-	}
-}
-
-void swap_char_array(char a[], char b[]){
-
-	char tmp[300] = "\0";
-	strcpy(tmp, a);
-	strcpy(a, b);
-	strcpy(b, tmp);
-}
-
-int partition_char_array(char a[][300], int low, int high){
-
-	char privotKey[300] = "\0";
-	strcpy(privotKey, a[low]);
-	while (low < high){
-		while (low < high  && strcmp(a[high], privotKey) >= 0) --high;
-		swap_char_array(a[low], a[high]);
-		while (low < high  && strcmp(a[low], privotKey) <= 0) ++low;
-		swap_char_array(a[low], a[high]);
-	}
-	return low;
-}
-
-void quick_sort_char_array(char a[][300], int low, int high){
-
-	if (low < high){
-		int privotLoc = partition_char_array(a, low, high);
-		quick_sort_char_array(a, low, privotLoc - 1);
-		quick_sort_char_array(a, privotLoc + 1, high);
-	}
-}
-
-void swap_number(int *a, int *b){
-
-	int tmp = *a;
-	*a = *b;
-	*b = tmp;
-}
-
-int partition_number(int a[], int low, int high){
-
-	int privotKey = a[low];
-	while (low < high){
-		while (low < high  && a[high] >= privotKey) --high;
-		swap_number(&a[low], &a[high]);
-		while (low < high  && a[low] <= privotKey) ++low;
-		swap_number(&a[low], &a[high]);
-	}
-	return low;
-}
-
-void quick_sort_number(int a[], int low, int high){
-
-	if (low < high){
-		int privotLoc = partition_number(a, low, high);
-		quick_sort_number(a, low, privotLoc - 1);
-		quick_sort_number(a, privotLoc + 1, high);
 	}
 }
